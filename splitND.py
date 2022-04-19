@@ -668,7 +668,7 @@ class spv(spvCommon):
             if self.zshape[i] > 1:
                 self.zzslider[i].SetTickFreq(5)#, 1)
                 #boxSizer.Add(self.zzslider[i], 1, wx.EXPAND)
-                boxSizer.Insert(0, self.zzslider[i], proportion=1, flag=wx.EXPAND)
+                boxSizer.Insert(0, self.zzslider[i], proportion=1, flag=wx.EXPAND | wx.RESERVE_SPACE_EVEN_IF_HIDDEN)
                 #wx.EVT_SLIDER(parent, self.zzslider[i].GetId(), self.OnZZSlider)
                 parent.Bind(wx.EVT_SLIDER, self.OnZZSlider, id=self.zzslider[i].GetId())
             else: # still good to create the slider - just to no have special handling
@@ -769,14 +769,16 @@ class spv(spvCommon):
         from . import fftfuncs as F
         if self.data.dtype.type in (N.complex64, N.complex128):
             print("TODO: cplx ")
-        run(F.getXZview(self.data, zaxis=0), title='X-Z of %d'%self.id, _scoopLevel=2)
+        #run(F.getXZview(self.data, zaxis=0), title='X-Z of %d'%self.id, _scoopLevel=2)
+        run(F.getXZview(self.data, zaxis=-3), title='X-Z of %d'%self.id, _scoopLevel=2)
         from .usefulX import vHistSettings
         vHistSettings(self.id,-1)
     def OnViewFlipYZ(self, event=77777):
         from . import fftfuncs as F
         if self.data.dtype.type in (N.complex64, N.complex128):
             print("TODO: cplx ")
-        run(F.getYZview(self.data, zaxis=0), title='Y-Z of %d'%self.id, _scoopLevel=2)
+        #run(F.getYZview(self.data, zaxis=0), title='Y-Z of %d'%self.id, _scoopLevel=2)
+        run(F.getYZview(self.data, zaxis=-3), title='Y-Z of %d'%self.id, _scoopLevel=2)
         from .usefulX import vHistSettings
         vHistSettings(self.id,-1)
 

@@ -74,7 +74,7 @@ class Mrc:
         else:    
             self.isByteSwapped = False
             
-        self.data_offset = 1024 + self.hdr.next #__next__
+        self.data_offset = 1024 + self.hdr.next[0] #__next__
         self.d = self.m[self.data_offset:]
 
 
@@ -82,8 +82,8 @@ class Mrc:
 
         self.doDataMap()
 
-        self.numInts = self.hdr.NumIntegers
-        self.numFloats = self.hdr.NumFloats
+        self.numInts = self.hdr.NumIntegers[0]
+        self.numFloats = self.hdr.NumFloats[0]
         
         if self.numInts > 0 or self.numFloats > 0:
             self.doExtHdrMap()
@@ -113,7 +113,7 @@ class Mrc:
             raise ValueError("what ??")
         if self.data_offset != 1024:
             raise ValueError("what 2 ??")
-        if self.hdr.next != 0:
+        if self.hdr.next[0] != 0:
             raise ValueError("what 3 ??")
         if nz <= 0:
             nz = self.hdr.Num[-1]
@@ -164,7 +164,7 @@ class Mrc:
         self.extFloats = self.extHdrArray.field('float')
         
     def doDataMap(self):
-        dtype = MrcMode2dtype( self.hdr.PixelType )
+        dtype = MrcMode2dtype( self.hdr.PixelType[0] )
         shape = shapeFromHdr(self.hdr)
                 
         self.data = self.d.view()
@@ -358,7 +358,7 @@ def save(a, fn, ifExists='ask', zAxisOrder=None,
         if wAxis < 0:
             m.hdr.mmm1 = U.mmm(a)
         else:
-            nw = m.hdr.NumWaves
+            nw = m.hdr.NumWaves[0]
             m.hdr.mmm1 = U.mmm(a.take((0,),wAxis))
             if nw >=2:
                 m.hdr.mm2 = U.mm(a.take((1,),wAxis))
@@ -542,9 +542,10 @@ class Mrc2:
             self.hdr._array.dtype = self.hdr._array.dtype.newbyteorder()
             self._fileIsByteSwapped = True
 
-        self._extHdrSize        = self.hdr.next
-        self._extHdrNumInts     = self.hdr.NumIntegers
-        self._extHdrNumFloats   = self.hdr.NumFloats
+        # int() to prevent overflow
+        self._extHdrSize        = int(self.hdr.next[0])
+        self._extHdrNumInts     = int(self.hdr.NumIntegers[0]) 
+        self._extHdrNumFloats   = int(self.hdr.NumFloats[0])
         self._extHdrBytesPerSec = (self._extHdrNumInts + self._extHdrNumFloats) * 4
         self._dataOffset   = self._hdrSize + self._extHdrSize
 
@@ -570,7 +571,7 @@ class Mrc2:
         nx, ny, nsecs =  self.hdr.Num
         self._shape = (nsecs, ny,nx) # todo: wavelenths , times
         self._shape2d = self._shape[-2:]
-        self._dtype  = MrcMode2dtype( self.hdr.PixelType )
+        self._dtype  = MrcMode2dtype( self.hdr.PixelType[0] )
         self._secByteSize = N.nbytes[self._dtype] * N.prod( self._shape2d )
         
     def setHdrForShapeType(self, shape, type ):
@@ -729,7 +730,7 @@ def dtype2MrcMode(dtype):
         return 6
     if dtype == N.int32:
         return 7
-    raise TypeError("MRC does not support %s (%s)"% (dtype.name, dtype))
+    raise TypeError("MRC does not support %s (%s)"% (dtype.__name__, dtype))
 
 
 def shapeFromHdr(hdr, verbose=0):
@@ -740,8 +741,8 @@ def shapeFromHdr(hdr, verbose=0):
     if verbose:
         print somthing like: w,t,z,y,x  ot z,y,x
     """
-    zOrder = hdr.ImgSequence # , 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
-    nt,nw = hdr.NumTimes, hdr.NumWaves
+    zOrder = hdr.ImgSequence[0] # , 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
+    nt,nw = hdr.NumTimes[0], hdr.NumWaves[0]
     nx, ny, nsecs =  hdr.Num
     if nt == 0:
         #20051213(ref."other's" MRC) print " ** NumTimes is zero - I assume 1."
@@ -806,6 +807,8 @@ def implement_hdr(hdrArray):
                 return hdrArray   # 20060818
             #20070131 return hdrArray.field(n)[0]
             return hdrArray[n][0]
+        def __dir__(self): # added to work on Priithon 20210716
+            return self.__slots__
 
         ## depricated !!
         #def __call__(s, n):
@@ -834,15 +837,15 @@ def makeHdrArray(buffer=None):
 def hdrInfo(hdr):
     shape = hdr.Num[::-1]    
     nz = shape[0]
-    numInts = hdr.NumIntegers
-    numFloats = hdr.NumFloats
+    numInts = hdr.NumIntegers[0]
+    numFloats = hdr.NumFloats[0]
 
     
     print("width:                      ", shape[2])
     print("height:                     ", shape[1])
     print("# total slices:             ", shape[0])
 
-    nt,nw = hdr.NumTimes, hdr.NumWaves
+    nt,nw = hdr.NumTimes[0], hdr.NumWaves[0]
 
     if nt == 0  or nw == 0:
         print(" ** ERROR ** : NumTimes or NumWaves is zero")
@@ -861,7 +864,7 @@ def hdrInfo(hdr):
                                                            nz/nw/nt))
             
     if nt != 1  or  nw != 1:
-        print("# slice order:        %d (0,1,2 = (wtz, tzw or twz)"% hdr.ImgSequence)
+        print("# slice order:        %d (0,1,2 = (wtz, tzw or twz)"% hdr.ImgSequence[0])
 
     print("pixel width x    (um):      ", hdr.d[0])
     print("pixel width y    (um):      ", hdr.d[1])
@@ -890,7 +893,7 @@ def hdrInfo(hdr):
     #/  ostr +="filetype:              " += filetype ... 0=normal, ..., 2=stereo ...
     #/    ostr += "n1, n2, v1, v2:          " +=  depend on filetype ....
     
-    print("lens type:                  ", hdr.LensNum, end=' ')
+    print("lens type:                  ", hdr.LensNum[0], end=' ')
     if hdr.LensNum == 12:
         print(" (60x)")
     elif hdr.LensNum == 13:
@@ -901,42 +904,42 @@ def hdrInfo(hdr):
     print("origin   (um) x/y/z:        ", hdr.zxy0[1], hdr.zxy0[2], hdr.zxy0[0])
 
     print("# pixel data type:            ", end=' ')
-    if hdr.PixelType == 0:
+    if hdr.PixelType[0] == 0:
         print("8 bit (unsigned)")
-    elif hdr.PixelType == 1:
+    elif hdr.PixelType[0] == 1:
         print("16 bit (signed)")
-    elif hdr.PixelType == 2:
+    elif hdr.PixelType[0] == 2:
         print("32 bit (signed real)")
-    elif hdr.PixelType == 3:
+    elif hdr.PixelType[0] == 3:
         print("16 bit (signed complex integer)")
-    elif hdr.PixelType == 4:
+    elif hdr.PixelType[0] == 4:
         print("32 bit (signed complex real)")
-    elif hdr.PixelType == 5:
+    elif hdr.PixelType[0] == 5:
         print("16 bit (signed) IW_EMTOM")
-    elif hdr.PixelType == 6:
+    elif hdr.PixelType[0] == 6:
         print("16 bit (unsigned short)")
-    elif hdr.PixelType == 7:
+    elif hdr.PixelType[0] == 7:
         print("32 bit (signed long)")
     else                         :
         print(" ** undefined ** ")
 
     #//ostr += "bytes before image data:     " + 1024+inbsym + '\n';
-    print("# extended header size:       ", hdr.next, end=' ')
-    if hdr.next > 0:
+    print("# extended header size:       ", hdr.next[0], end=' ')
+    if hdr.next[0] > 0:
         n = numInts + numFloats
         if n>0:
-            print(" (%d secs)" % (hdr.next/(4. * n) ,))
+            print(" (%d secs)" % (hdr.next[0]/(4. * n) ,))
         else:
             print(" (??? secs)")
         print("  (%d ints + %d reals per section)"% (numInts, numFloats))
     else:
         print()
-    if hdr.NumTitles < 0:
-        print(" ** ERROR ** : NumTitles less than zero (NumTitles =", hdr.NumTitles, ")")
-    elif hdr.NumTitles >0:
-        n = hdr.NumTitles
+    if hdr.NumTitles[0] < 0:
+        print(" ** ERROR ** : NumTitles less than zero (NumTitles =", hdr.NumTitles[0], ")")
+    elif hdr.NumTitles[0] >0:
+        n = hdr.NumTitles[0]
         if n>10:
-            print(" ** ERROR ** : NumTitles larger than 10 (NumTitles =", hdr.NumTitles,")")
+            print(" ** ERROR ** : NumTitles larger than 10 (NumTitles =", hdr.NumTitles[0],")")
             n=10
         for i in range( n ):
             print("title %d: %s"%(i, hdr.title[i]))
@@ -954,8 +957,8 @@ def axisOrderStr(hdr, onlyLetters=True):
 
     fixme: possibly wrong when doDataMap found bad file-size
     """
-    zOrder = int(hdr.ImgSequence) # , 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
-    nt,nw = hdr.NumTimes, hdr.NumWaves
+    zOrder = int(hdr.ImgSequence[0]) # , 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
+    nt,nw = hdr.NumTimes[0], hdr.NumWaves[0]
     if nt == nw == 1:
         orderLetters= "zyx"
     elif nt == 1:
@@ -1096,7 +1099,7 @@ def initHdrArrayFrom(hdrDest, hdrSrc): #, mode, nxOrShape, ny=None, nz=None):
 def setTitle(hdr, s, i=-1):
     """set title i (i==-1 means "append") to s"""
 
-    n = hdr.NumTitles
+    n = hdr.NumTitles[0]
 
     if i < 0:
         i = n
@@ -1115,51 +1118,53 @@ def setTitle(hdr, s, i=-1):
 
 
 mrcHdrFields = [
-    ('3i4', 'Num'),   # (nx,ny,nSecs)
-    ('1i4', 'PixelType'),
-    ('3i4', 'mst'),
-    ('3i4', 'm'),
-    ('3f4', 'd'),
-    ('3f4', 'angle'),
-    ('3i4', 'axis'),
-    ('3f4', 'mmm1'),
-    ('1i2', 'type'),
-    ('1i2', 'nspg'),
-    ('1i4', 'next'),
-    ('1i2', 'dvid'),
+    ('i4', (3,), 'Num'),   # (nx,ny,nSecs)
+    ('i4', (1,), 'PixelType'),
+    ('i4', (3,), 'mst'),
+    ('i4', (3,), 'm'),
+    ('f4', (3,), 'd'),
+    ('f4', (3,), 'angle'),
+    ('i4', (3,), 'axis'),
+    ('f4', (3,), 'mmm1'),
+    ('i2', (1,), 'type'),
+    ('i2', (1,), 'nspg'),
+    ('i4', (1,), 'next'),
+    ('i2', (1,), 'dvid'),
 #20090402    ('30i1', 'blank'),
-    ('1i2', 'nblank'),
-    ('1i4', 'ntst'),    
-    ('24u1', 'extra'),
-    ('1i2', 'NumIntegers', 'Number of 4 byte integers stored in the extended header per section. '),
-    ('1i2', 'NumFloats', 'Number of 4 byte floating-point numbers stored in the extended header per section. '),
-    ('1i2', 'sub', 'Number of sub-resolution data sets stored within the image. Typically, this equals 1. '),
-    ('1i2', 'zfac', 'Reduction quotient for the z axis of the sub-resolution images. '),
-    ('2f4', 'mm2', 'Minimum intensity of the 2nd wavelength image. '),
-    ('2f4', 'mm3', 'Minimum intensity of the 2nd wavelength image. '),
-    ('2f4', 'mm4', 'Minimum intensity of the 2nd wavelength image. '),
-    ('1i2', 'ImageType', 'Image type. See Image Type table below. '),
-    ('1i2', 'LensNum', 'Lens identification number.'),
-    ('1i2', 'n1', 'Depends on the image type.'),
-    ('1i2', 'n2', 'Depends on the image type.'),
-    ('1i2', 'v1', 'Depends on the image type. '),
-    ('1i2', 'v2', 'Depends on the image type. '),
-    ('2f4', 'mm5', 'Minimum intensity of the 2nd wavelength image. '),
-    ('1i2', 'NumTimes', 'Number of time points.'),#u2', 'NumTimes', 'Number of time points.'),
-    ('1i2', 'ImgSequence', 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
-    ('3f4', 'tilt', 'X axis tilt angle (degrees). '),
-    ('1i2', 'NumWaves', 'Number of wavelengths.'),
-    ('5i2', 'wave', 'Wavelength 1, in nm.'),
-    ('3f4', 'zxy0', 'X origin, in um.'),   # 20050920  ## fixed: order is z,x,y NOT x,y,z
-    ('1i4', 'NumTitles', 'Number of titles. Valid numbers are between 0 and 10. '),
-    ('10a80', 'title', 'Title 1. 80 characters long. '),
+    ('i2', (1,), 'nblank'),
+    ('i4', (1,), 'ntst'),    
+    ('u1', (24,), 'extra'),
+    ('i2', (1,), 'NumIntegers', 'Number of 4 byte integers stored in the extended header per section. '),
+    ('i2', (1,), 'NumFloats', 'Number of 4 byte floating-point numbers stored in the extended header per section. '),
+    ('i2', (1,), 'sub', 'Number of sub-resolution data sets stored within the image. Typically, this equals 1. '),
+    ('i2', (1,), 'zfac', 'Reduction quotient for the z axis of the sub-resolution images. '),
+    ('f4', (2,), 'mm2', 'Minimum intensity of the 2nd wavelength image. '),
+    ('f4', (2,), 'mm3', 'Minimum intensity of the 2nd wavelength image. '),
+    ('f4', (2,), 'mm4', 'Minimum intensity of the 2nd wavelength image. '),
+    ('i2', (1,), 'ImageType', 'Image type. See Image Type table below. '),
+    ('i2', (1,), 'LensNum', 'Lens identification number.'),
+    ('i2', (1,), 'n1', 'Depends on the image type.'),
+    ('i2', (1,), 'n2', 'Depends on the image type.'),
+    ('i2', (1,), 'v1', 'Depends on the image type. '),
+    ('i2', (1,), 'v2', 'Depends on the image type. '),
+    ('f4', (2,), 'mm5', 'Minimum intensity of the 2nd wavelength image. '),
+    ('i2', (1,), 'NumTimes', 'Number of time points.'),#u2', 'NumTimes', 'Number of time points.'),
+    ('i2', (1,), 'ImgSequence', 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT. '),
+    ('f4', (3,), 'tilt', 'X axis tilt angle (degrees). '),
+    ('i2', (1,), 'NumWaves', 'Number of wavelengths.'),
+    ('i2', (5,), 'wave', 'Wavelength 1, in nm.'),
+    ('f4', (3,), 'zxy0', 'X origin, in um.'),   # 20050920  ## fixed: order is z,x,y NOT x,y,z
+    ('i4', (1,), 'NumTitles', 'Number of titles. Valid numbers are between 0 and 10. '),
+    ('a80', (10,), 'title', 'Title 1. 80 characters long. '),
 ]
 
-mrcHdrNames = []
 mrcHdrFormats = []
+mrcHdrNums = []
+mrcHdrNames = []
 for ff in mrcHdrFields:
     mrcHdrFormats.append(ff[0])
-    mrcHdrNames.append(ff[1])
+    mrcHdrNums.append(ff[1])
+    mrcHdrNames.append(ff[2])
 del ff
 del mrcHdrFields
-mrcHdr_dtype = list(zip(mrcHdrNames, mrcHdrFormats))
+mrcHdr_dtype = list(zip(mrcHdrNames, mrcHdrFormats, mrcHdrNums))

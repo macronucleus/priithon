@@ -12,13 +12,17 @@ try:
 except ImportError:
     pass
 
+old='''
 try:
     import Image
 except ImportError:
     try:
         from PIL import Image
-    except:
-        pass
+    except ImportError:
+        try:
+            import wx
+        except ImportError:
+            pass'''
     
 #20060722  import numarray as na
 ######from numarray import nd_image as nd
@@ -1606,7 +1610,7 @@ def histogram(a, nBins=None, amin=None,amax=None, histArr=None, norm=False, cums
     else:
         if nBins is None:
             nBins = int(amax-amin+1)
-            if N.issubdtype(float, a.dtype) and nBins < 100:
+            if (N.issubdtype(float, a.dtype) and nBins < 100) or nBins > 100000:
                 nBins = 100
 
         histArr = N.empty( shape=(nBins,), dtype=N.int32 )
@@ -2199,7 +2203,7 @@ def image2array(im, i0=0, iDelta=1, squeezeGreyRGB=True):
         
     return a
 
-
+old='''
 def array2image(a, rgbOrder="rgba"):
     """Convert numpy array to image
        a must be of ndim 2 and dtype UInt8,Float32 or UInt16
@@ -2264,7 +2268,7 @@ def array2image(a, rgbOrder="rgba"):
     else:
         raise ValueError("unsupported array datatype")
     return Image.frombytes(mode, (a.shape[1], a.shape[0]), a.tostring())
-    #20040929 todo: try this:   return Image.frombuffer(mode, (a.shape[1], a.shape[0]), a._data)
+    #20040929 todo: try this:   return Image.frombuffer(mode, (a.shape[1], a.shape[0]), a._data)'''
 
 
 def load(fn):
@@ -2282,6 +2286,7 @@ def load(fn):
 
        if imgFN is None  call Y.FN()  for you
     """
+    import os
     if fn[-5:].lower() == ".fits":
         #import useful as U
         a = loadFits( fn )
@@ -2294,7 +2299,16 @@ def load(fn):
     elif fn.lower().endswith(('.dv', '.mrc')):
         from . import Mrc
         a = Mrc.bindFile(fn)
-    elif not fn.lower().endswith(('tif', 'tiff')):
+    elif os.path.isdir(fn):
+        try:
+            from .. import imgio
+        except (ValueError, ImportError):
+            import imgio
+        h = imgio.imgSeqIO(fn)
+        a = N.squeeze(h.asarray())
+        h.close()
+    else:#if not fn.lower().endswith(('tif', 'tiff')):
+        old="""
         try:
             iDelta = 1
             if fn[-4:].lower() == ".lsm":
@@ -2302,25 +2316,30 @@ def load(fn):
             #import useful as U
             a = loadImg(fn, iDelta=iDelta)
             #20060824 CHECK  a._originLeftBottom=0
-        except (IOError, SystemError, ImportError, OSError): # ImportError for Image
+        except (IOError, SystemError, ImportError, OSError): # ImportError for Image"""
+        try:
             try:
+                from .. import imgio
+            except (ValueError, ImportError):
                 import imgio
-                h = imgio.Reader(fn)
-                a = N.squeeze(h.asarray())
-                h.close()
-            except ImportError:
-                from . import Mrc
-                a = Mrc.bindFile(fn)
+            old="""
+            h = imgio.Reader(fn)
+            a = N.squeeze(h.asarray())
+            h.close()"""
+            a = imgio.load(fn)
+        except ImportError:
+            from . import Mrc
+            a = Mrc.bindFile(fn)
 
-    else:
-        import imgio
-        h = imgio.Reader(fn)
-        a = N.squeeze(h.asarray())
-        h.close()
+    #else:
+    #    import imgio
+    #    h = imgio.Reader(fn)
+    #    a = N.squeeze(h.asarray())
+    #    h.close()
 
     return a
     
-
+old='''
 def loadImg(fn, i0=0, iDelta=1, squeezeGreyRGB=True):
     """Loads image file (tiff,jpg,...) and return it as array
 
@@ -2438,9 +2457,27 @@ def loadImg_seq(fns, channels=None, verbose=0): #### #, i0=0, iDelta=1, squeezeG
     if isSwapped:
         a.byteswap(True)
 
-    return a
+    return a'''
 
 
+def saveImg(arr, fn, rescaleTo8bit=True, rgbOrder='rgba'):
+    try:
+        from .. import imgio
+    except (ValueError, ImportError):
+        import imgio
+    return imgio.imgIO.save(arr, fn, rescaleTo8bit, rgbOrder)
+
+def uninit_javabridge():
+    """
+    necessary to turn off the java connection after loading with bioformats
+    """
+    try:
+        from .. import imgio
+    except (ValueError, ImportError):
+        import imgio
+    imgio.uninit_javabridge()
+
+old='''
 def saveImg(arr, fn, forceMultipage=False, rgbOrder="rgba"):
     """
     Saves data array as image file (format from    extension !! .tif,.jpg,...)
@@ -2556,7 +2593,7 @@ def saveImg8_seq(arr, fn, rgbOrder="rgba"):
     ra = ma-mi
     for i in range(arr.shape[0]):
         a=(arr[i]-mi)*255./ra
-        saveImg(a.astype(N.uint8), fn % i, rgbOrder=rgbOrder)
+        saveImg(a.astype(N.uint8), fn % i, rgbOrder=rgbOrder)'''
 
 def loadFits(fn, slot=0):
     """

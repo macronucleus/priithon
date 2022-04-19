@@ -49,7 +49,7 @@ Menu_noGfx = wx.NewId()
 Menu_aspectRatio = wx.NewId()
 Menu_rotate = wx.NewId()
 Menu_grid        = wx.NewId()
-Menu_ColMap = [wx.NewId() for i in range(8)]
+Menu_ColMap = [wx.NewId() for i in range(9)]
 
 
 class GLViewerCommon(wxgl.GLCanvas):
@@ -859,6 +859,9 @@ set image aspect ratio (y/x factor for display)
             if copy == 0 returns non-contiguous array!!!
 
         """
+        self.m_zoomChanged = True
+        self.Refresh(0)
+        
         self.SetCurrent(self.context)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
         
