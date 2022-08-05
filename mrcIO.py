@@ -74,6 +74,30 @@ class MrcReader(generalIO.GeneralReader):
     def readSec(self, i):
         return self.fp.readSec(i)
 
+    def asarray(self):
+        """
+        return numpy array as shape (nt, nw, nz, ny, nx)
+        """
+        a = Mrc.bindFile(self.fn)
+        if self.imgSequence == 0:
+            a = a.reshape(self.nw, self.nt, self.nz, self.ny, self.nx)
+            a = a.transpose((1,0,2,3,4))
+        elif self.imgSequence == 1:
+            a = a.reshape(self.nt, self.nz, self.nw, self.ny, self.nx)
+            a = a.transpose((0,2,1,3,4))
+        elif self.imgSequence == 2:
+            a = a.reshape(self.nt, self.nw, self.nz, self.ny, self.nx)
+        elif self.imgSequence == 3:
+            a = a.reshape(self.nw, self.nz, self.nt, self.ny, self.nx)
+            a = a.transpose((2,0,1,3,4))
+        elif self.imgSequence == 4:
+            a = a.reshape(self.nz, self.nt, self.nw, self.ny, self.nx)
+            a = a.transpose((1,2,0,3,4))
+        elif self.imgSequence == 5:
+            a = a.reshape(self.nz, self.nw, self.nt, self.ny, self.nx)
+            a = a.transpose((2,1,0,3,4))
+        return a 
+
 
 class MrcWriter(generalIO.GeneralWriter):
     def __init__(self, outfn, hdr=None, extInts=None, extFloats=None):

@@ -9,9 +9,9 @@ except ImportError:
     import generalIO, mrcIO, multitifIO
 
 try:
-    from ..PriCommon import microscope, fntools, commonfuncs
+    from ..common import fntools, commonfuncs
 except (ValueError, ImportError):    
-    from PriCommon import microscope, fntools, commonfuncs
+    from common import fntools, commonfuncs
     
 import numpy as N
 

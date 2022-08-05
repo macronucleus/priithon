@@ -12,8 +12,8 @@ elif sys.version_info.major >= 3:
         from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO
     except ImportError:
         from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO
-        
-from .bioformatsIO import uninit_javabridge
+
+uninit_javabridge = bioformatsIO.uninit_javabridge
 
 READABLE_FORMATS = []
 WRITABLE_FORMATS = []

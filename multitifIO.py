@@ -442,8 +442,8 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                 del self.ex_metadata['Ranges']
 
         if self.style == 'imagej':
-            # 20210618
-            if int(tifffile.__version__.split('.')[0]) == 0:
+            # 20210618 -> 20220805
+            if hasattr(self.fp, '_byteorder'): #int(tifffile.__version__.split('.')[0]) == 0:
                 self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp._byteorder)
             else:
                 self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp.tiff.byteorder)
