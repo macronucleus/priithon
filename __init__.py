@@ -97,7 +97,11 @@ def _switch(fn, read=True, *args, **kwds):
 
     # ome.tif is written by BioformatsWriter
     elif fn.endswith('ome.tif') and not read:
-        return klasses['bio'](fn, *args, **kwds)
+        tifversion = tifffile.__version__.split('.')
+        if (int(tifversion[0]) == 2020 and int(tifversion[1]) >= 11) or int(tifversion[0]) > 2020:
+            return klasses['tif'](fn, style='ome', *args, **kwds)
+        else:
+            return klasses['bio'](fn, *args, **kwds)
     
     # specific formats
     elif ext in formats['tif']:

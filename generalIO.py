@@ -1,7 +1,7 @@
 import os, re
 import numpy as N
 
-IMGSEQ = ['WTZ', 'TZW', 'TWZ', 'WZT']
+IMGSEQ = ['WTZ', 'TZW', 'TWZ', 'WZT', 'ZTW', 'ZWT']
 
 WAVE_START = 0
 WAVE_STEP  =  1
@@ -70,7 +70,8 @@ class GeneralReader(object):
             del self.fp
 
     def __del__(self):
-        self.close()
+        if not self.closed():
+            self.close()
         
     # initial call
     def openFile(self):
@@ -83,7 +84,8 @@ class GeneralReader(object):
             self.readHeader()
 
     def closed(self):
-        return self.handle.closed
+        if hasattr(self, 'handle'):
+            return self.handle.closed
 
     def init(self):
         pass
@@ -263,6 +265,48 @@ class GeneralReader(object):
 
     def makeWaves(self):
         return makeWaves(self.nw)
+
+    def makeShape(self, squeeze=True):
+        """
+        return a shape according to imgSequence
+        """
+        yx = (self.ny, self.nx)
+        if self.axes == 'YX':
+            if self.imgSequence == 0:
+                shape = (self.nw,self.nt,self.nz) + yx
+            elif self.imgSequence == 1:
+                shape = (self.nt,self.nz,self.nw) + yx
+            elif self.imgSequence == 2:
+                shape = (self.nt,self.nw,self.nz) + yx
+            elif self.imgSequence == 3:
+                shape = (self.nw,self.nz,self.nt) + yx
+            elif self.imgSequence == 4:
+                shape = (self.nt,self.nt,self.nw) + yx
+            elif self.imgSequence == 5:
+                shape = (self.nz,self.nw,self.nt) + yx
+        elif len(self.axes) == 3 and self.axes[0] in ('S', 'C', 'W'):
+            if self.imgSequence <= 2:
+                shape = (self.nt, self.nz, self.nw) + yx
+            else:
+                shape = (self.nz, self.nt, self.nw) + yx
+        elif len(self.axes) == 3 and self.axes[-1] in ('S', 'C', 'W'):
+            yxw = yx + (self.nw,)
+            if self.imgSequence <= 2:
+                shape = (self.nt, self.nz) + yxw
+            else:
+                shape = (self.nz, self.nt) + yxw
+
+        if squeeze:
+            shape = tuple((i for i in shape if i != 1))
+                    
+        return shape
+
+    def makeDimensionStr(self, squeeze=True):
+        dstr = IMGSEQ[self.imgSequence] + 'YX'
+        if squeeze:
+            shape = self.makeShape(False)
+            dstr =  ''.join([ds for i, ds in enumerate(dstr) if shape[i] > 1])
+        return dstr
         
     def seekSec(self, i=0):
         """
