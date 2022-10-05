@@ -5,21 +5,26 @@ try:
 except ImportError:
     import generalIO
 import six
-import tifffile # 2020.11.26 - 2021.7.2
-from tifffile import tifffile as tifff
-## MEMO: "ImageJ does  not support non-contiguous data" means shape does not match
 
-import struct, copy
+
+import struct, copy, inspect
     
 import numpy as N
 
-WRITABLE_FORMATS = ('tif', 'tiff')
-tifversion = tifffile.__version__.split('.')
-if int(tifversion[0]) > 2021 or (int(tifversion[0]) >= 2021 and int(tifversion[1]) >= 11):
-    WRITABLE_FORMATS += ('ome.tif', 'ome.tiff')
-    READABLE_FORMATS = WRITABLE_FORMATS + ('lsm',)
-else:
-    READABLE_FORMATS = WRITABLE_FORMATS + ('ome.tif', 'ome.tiff', 'lsm')
+try:
+    import tifffile # 2020.11.26 - 2021.7.2
+    from tifffile import tifffile as tifff
+    ## MEMO: "ImageJ does  not support non-contiguous data" means shape does not match
+    WRITABLE_FORMATS = ('tif', 'tiff')
+    tifversion = tifffile.__version__.split('.')
+    if int(tifversion[0]) > 2021 or (int(tifversion[0]) >= 2021 and int(tifversion[1]) >= 11):
+        WRITABLE_FORMATS += ('ome.tif', 'ome.tiff')
+        READABLE_FORMATS = WRITABLE_FORMATS + ('lsm',)
+    else:
+        READABLE_FORMATS = WRITABLE_FORMATS + ('ome.tif', 'ome.tiff', 'lsm')
+except ImportError:
+    WRITABLE_FORMATS = READABLE_FORMATS = ()
+    
 
 IMAGEJ_METADATA_TYPES = ['Info', 'Labels', 'Ranges', 'LUTs', 'Plot', 'ROI', 'Overlays']
 
@@ -314,7 +319,12 @@ class MultiTiffReader(generalIO.GeneralReader):
             ndata = tifffile.product(series.shape[-2:])
             dtype = N.dtype(byteorder)
             self.handle.seek(series.offset + (ndata * dtype.itemsize * i))
-            img = self.handle.read_array(byteorder, count=ndata, out=None, native=True)
+
+            parameters = inspect.signature(self.handle.read_array)
+            if 'native' in parameters.parameters.keys():
+                img = self.handle.read_array(byteorder, count=ndata, out=None, native=True)
+            else:
+                img = self.handle.read_array(byteorder, count=ndata, out=None)
             arr = img.reshape(self.shape)
         return arr
 

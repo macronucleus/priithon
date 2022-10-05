@@ -63,7 +63,11 @@ try:
         HAS_JDK = True
     
     # ------ now ready to go -----------------------------
-    READABLE_FORMATS = bioformats.READABLE_FORMATS
+    READABLE_FORMATS = tuple(bioformats.READABLE_FORMATS)
+    #for ext in ('mrc', 'dv', 'tif', 'tiff'):
+    #    if ext in READABLE_FORMATS:
+    #        READABLE_FORMATS.remove(ext)
+    #READABLE_FORMATS = tuple(READABLE_FORMATS)
     WRITABLE_FORMATS = ('dv', 'ome.tif')
         
 
@@ -94,8 +98,8 @@ except:
         warnings.warn(errs, UserWarning)
         
 
-    READABLE_FORMATS = []
-    WRITABLE_FORMATS = []
+    READABLE_FORMATS = ()
+    WRITABLE_FORMATS = ()
     # dummy fucs
     def pixeltype_to_bioformats(dtype):
         return N.int8
@@ -111,11 +115,11 @@ except:
             import bioformats
         except ImportError: # bioformats is simply not installed
             class bioformats:
-                READABLE_FORMATS = []
-                WRITABLE_FORMATS = []
+                READABLE_FORMATS = ()
+                WRITABLE_FORMATS = ()
         except: # JDK is not installed
             class bioformats:
-                READABLE_FORMATS = ['al3d', 'am', 'amiramesh', 'apl', 'arf', 'avi', 'bmp',
+                READABLE_FORMATS = ('al3d', 'am', 'amiramesh', 'apl', 'arf', 'avi', 'bmp',
                         'c01', 'cfg', 'cxd', 'czi', 'dat', 'dcm', 'dicom', 'dm3',# 'dv',
                         'eps', 'epsi', 'fits', 'flex', 'fli', 'gel', 'gif', 'grey',
                         'hdr', 'html', 'hx', 'ics', 'ids', 'img', 'ims', 'ipl',
@@ -125,9 +129,9 @@ except:
                         'nrrd', 'obsep', 'oib', 'oif', 'ome', 'pcx', #'ome.tiff'
                         'pgm', 'pic', 'pict', 'png', 'ps', 'psd', 'r3d', 'raw',
                         'scn', 'sdt', 'seq', 'sld', 'stk', 'svs', #'tif', 'tiff',
-                        'tnb', 'txt', 'vws', 'xdce', 'xml', 'xv', 'xys', 'zvi']
-                WRITABLE_FORMATS = ['avi', 'eps', 'epsi', 'ics', 'ids', 'jp2', 'jpeg', 'jpg',
-                        'mov', 'ome', 'ome.tiff', 'png', 'ps', 'tif', 'tiff']
+                        'tnb', 'txt', 'vws', 'xdce', 'xml', 'xv', 'xys', 'zvi')
+                WRITABLE_FORMATS = ('avi', 'eps', 'epsi', 'ics', 'ids', 'jp2', 'jpeg', 'jpg',
+                        'mov', 'ome', 'ome.tiff', 'png', 'ps', 'tif', 'tiff')
 
     try:
         javabridge

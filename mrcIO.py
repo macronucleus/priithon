@@ -44,6 +44,7 @@ class MrcReader(generalIO.GeneralReader):
         self.pxlsiz = self.fp.hdr.d[::-1]
 
         self.hdr = self.fp.hdr
+        self.metadata['title'] = self.hdr.title
 
         self.fp._secByteSize = self._secByteSize
 

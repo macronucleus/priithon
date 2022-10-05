@@ -196,6 +196,10 @@ class GeneralReader(object):
 
     def setPixelSize(self, pz=1, py=1, px=1):
         self.pxlsiz[:] = pz, py, px
+        try:
+            self.doOnSetDim() # cannot be called before calling setDim
+        except:
+            pass
 
     def setRoi(self, zyx_start, zyx_size):
         self.roi_start[:] = zyx_start
@@ -479,6 +483,41 @@ class GeneralReader(object):
             for w in range(self.nw):
                 img[t,w] = self.get3DArr(t=t, w=w)
         return img
+
+    def arr_with_header(self):
+        """
+        return numpy array as shape squeeze(nt, nw, nz, ny, nx) with header
+        """
+        class header:
+            def __init__(cls):
+                attrs = ('nt', 'nw', 'nz', 'ny', 'nx', 'metadata', 'fn', 'pxlsiz', 'wave', 'ex_metadata')
+                for att in attrs:
+                    setattr(cls, att, getattr(self, att))
+
+        class roi:
+            def __init__(cls):
+                attrs = ('roi_start', 'roi_size', 't', 'w', 'z', 't', 'x')
+                for att in attrs:
+                    setattr(cls, att, getattr(self, att))
+        
+        # https://stackoverflow.com/questions/67509913/add-an-attribute-to-a-numpy-array-in-runtime
+        class ndarray_in_imgio(N.ndarray):
+            def __new__(cls, arr, header=None, roi=None):
+                obj = N.asarray(arr).view(cls)
+                obj.header = header
+                obj.roi = roi
+                return obj
+            
+            def __array_finalize__(self,obj):
+                if obj is None: return
+                self.header = getattr(obj, 'header', None)
+                self.roi = getattr(obj, 'roi', None)
+
+        data = N.squeeze(self.asarray()) 
+        
+        data = ndarray_in_imgio(data, header(), roi())
+
+        return data
 
 class GeneralWriter(GeneralReader):
     def __init__(self, fn, mode='wb'):

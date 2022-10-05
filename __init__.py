@@ -25,7 +25,9 @@ for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arra
 READABLE_FORMATS = tuple(sorted(list(set(READABLE_FORMATS))))
 WRITABLE_FORMATS = tuple(sorted(list(set(WRITABLE_FORMATS))))
 
-JDK_MSG = 'Reading your image format "%s" requires Java Development Kit (JDK).'
+JDK_MSG = 'Reading/Writing your image format "%s" is not supported.'
+if not bioformatsIO.HAS_JDK:
+    JDK_MSG += ' Installing Java Development Kit (JDK) may help.'
     
 def Reader(fn, *args, **kwds):
     """
@@ -75,7 +77,8 @@ def _switch(fn, read=True, *args, **kwds):
         
 
     ## --- JDK check----
-    if ext in bioformatsIO.bioformats.READABLE_FORMATS and ext not in formats['bio'] and ext not in formats['seq']:
+    _allfmt = formats['tif'] + formats['mrc'] + formats['seq'] + formats['bio']
+    if ext not in _allfmt and ext in bioformatsIO.bioformats.READABLE_FORMATS:# and ext not in formats['bio'] and ext not in formats['seq']:
         raise ValueError(JDK_MSG % ext)
     #-------------
     
@@ -139,7 +142,7 @@ def load(fn):
     if type(h) == N.ndarray:
         a = h
     else:
-        a = N.squeeze(h.asarray())
+        a = h.arr_with_header() #N.squeeze(h.asarray())
         h.close()
     return a
 
