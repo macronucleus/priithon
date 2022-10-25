@@ -146,6 +146,91 @@ def load(fn):
         h.close()
     return a
 
+def save(arr, outfn, dimorder='twzyx', wave=[], pzyx=[.1,.1,.1], metadata={}):
+    """
+    arr: numpy array
+    outfn: output file name with extension (usually '.dv' or '.tif')
+    
+    return outputfilename
+    """
+    import re
+
+    # check if the array is writable into the target file
+    base, ext = os.path.splitext(outfn)
+    if ext.replace('.', '') not in WRITABLE_FORMATS:
+        raise ValueError('%s is not writable, please choose from %s' % (ext, WRITABLE_FORMATS))
+
+    if arr.ndim > 3 and ext not in ('.dv', '.mrc', '.tif'):
+        raise ValueError('%i dimension array is not compatible with %s format' % (arr.dim, ext))
+    
+    if N.iscomplexobj(arr) and ext not in ('.dv', '.mrc'):
+        raise ValueError('The array is complex type, please use ".dv" format')
+
+    # dtype check
+    match = re.match(r"([a-z]+)([0-9]+)", arr.dtype.name, re.I)
+    if match:
+        dtypename, dtypenum = match.groups()
+        dtypenum = int(dtypenum)
+    else:
+        dtypename = arr.dtype.name
+        dtypenum = 1000
+    
+    if 'int' in dtypename and dtypenum > 16:
+        if dtypename.startswith('u'):
+            arr = arr.astype(N.uint16) # can be converted to 8 bit in the writer
+        else:
+            arr = arr.astype(N.int16)
+    elif dtypename == 'float' and dtypenum > 32:
+        arr = arr.astype(N.float32)
+    elif dtypenum == 'complex' and dtypenum > 64:
+        arr = arr.astype(N.complex64)
+
+    # more than 5 dimension is saved in a tifffle
+    if arr.ndim > 5:
+        if ext != '.tif':
+            raise ValueError('dimension of %i can only be saved in tif format' % arr.ndim)
+        multitifIO.tifffile.imsave(outfn, arr, metadata={'wave': wave}.update(metadata))
+        return outfn
+
+    # save in conventional microscopy formats
+    # dimension data
+    kwd = {}
+    for i, s in enumerate(arr.shape[::-1]):
+        kwd['n'+dimorder[::-1][i]] = s
+    for nd in ['nt', 'nw', 'nz', 'ny']:
+        if nd not in kwd:
+            kwd[nd] = 1
+    arr = arr.reshape((1,) * (5-arr.ndim) + arr.shape)
+        
+    with Writer(outfn) as o:
+        # header
+        kwd['imgSequence'] = o.findImgSequence(dimorder[:-2])
+        kwd['dtype'] = arr.dtype
+        kwd['wave'] = wave
+        
+        o.setDim(**kwd)
+        o.setPixelSize(*pzyx)
+        if hasattr(o, 'metadata'):
+            o.metadata.update(metadata)
+
+        dstr = generalIO.IMGSEQ[kwd['imgSequence']]
+
+        # start saving
+        ind = [0,0,0]
+        for t in range(kwd['nt']):
+            ind[dstr.index('T')] = t
+            for w in range(kwd['nw']):
+                ind[dstr.index('W')] = w
+                for z in range(kwd['nz']):
+                    ind[dstr.index('Z')] = z
+                    a = arr[tuple(ind)]
+                    o.writeArr(a, t=t, w=w, z=z)
+        
+    return outfn
+    
+    
+    
+
 def copy(fn, out='test.dv'):
     """
     return Reader of the output file

@@ -330,16 +330,16 @@ class MultiTiffReader(generalIO.GeneralReader):
 
 
 class MultiTiffWriter(generalIO.GeneralWriter):
-    def __init__(self, fn, mode=None, style='imagej', software='multitifIO.py', extra_metadata={}):
+    def __init__(self, fn, mode=None, style='imagej', software='multitifIO.py', metadata={}):
         """
         mode is 'wb' whatever the value is...
         style: 'imagej', 'ome', ..., ('RGB' does not work yet)
         """
         self.style = style #imagej = imagej
-        self.metadata = {}
+        self.metadata = metadata #{}
         self.software = software
-        self.ex_metadata = extra_metadata
-        self.extratags = ()
+        #self.ex_metadata = extra_metadata
+        #self.extratags = ()
         self.init = False
 
         generalIO.GeneralWriter.__init__(self, fn, mode)
@@ -454,7 +454,7 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                 self._secByteSize = (self.ny*self.nx) * arr.itemsize
             else:
                 test = N.zeros((self.ny, self.nx), self.dtype)
-                self.dataOffset, self._secByteSize = self.fp.save(test, resolution=self.res, metadata=self.metadata, returnoffset=True, extratags=self.extratags)
+                self.dataOffset, self._secByteSize = self.fp.save(test, resolution=self.res, metadata=self.metadata, returnoffset=True)#, extratags=self.extratags)
                 self.handle.seek(self.handle.tell() - self._secByteSize)
 
             self.init = True
@@ -523,10 +523,10 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                 if nw_range != self.nw:
                     del self.ex_metadata['Ranges']
             # 20210618 -> 20220805
-            if hasattr(self.fp, '_byteorder'):
-                self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp._byteorder)
-            else:
-                self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp.tiff.byteorder)
+           # if hasattr(self.fp, '_byteorder'):
+           #     self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp._byteorder)
+           # else:
+           #     self.extratags = imagej_metadata_tags(self.ex_metadata, self.fp.tiff.byteorder)
 
             
         return metadata
