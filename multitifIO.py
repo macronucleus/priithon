@@ -407,6 +407,9 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         if self.style == 'imagej': 
             self.imgSequence = 1
             self.metadata.update(self._makeMetadata())
+            datasize = self._secByteSize * self.nt * self.nw
+            if datasize >= (2**32):
+                raise ValueError('ImageJ format does not allow file size more than 4GB but your data has %.1f GB.' % (datasize/(10**9)))
         elif self.style == 'ome':
             self.metadata.update(self.makeOMEMetadata())
         else:
@@ -414,7 +417,6 @@ class MultiTiffWriter(generalIO.GeneralWriter):
 
         unit = 10**6
         self.res = [(int(p), unit) for p in 1/self.pxlsiz[-2:] * unit]
-
 
                     
         

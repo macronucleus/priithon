@@ -27,7 +27,7 @@ class GeneralReader(object):
         self.imgseqs = IMGSEQ
         self.metadata = {}
         self.ex_metadata = {}
-        self.useROI2getArr = False
+        #self.useROI2getArr = False
         self.flip_required = True
         
         self.mode = mode
@@ -35,7 +35,7 @@ class GeneralReader(object):
         self.axes_w = 0
 
         # current positions
-        self.t = self.w = self.z = self.y = self.x = 0
+       # self.t = self.w = self.z = self.y = self.x = 0
 
         self.openFile()
 
@@ -84,7 +84,7 @@ class GeneralReader(object):
             self.readHeader()
 
     def closed(self):
-        if hasattr(self, 'handle'):
+        if hasattr(self, 'handle') and hasattr(self.handle, 'closed'):
             return self.handle.closed
 
     def init(self):
@@ -131,17 +131,27 @@ class GeneralReader(object):
         if nx:
             self.nx = int(nx)
             self.x = self.nx // 2
+        elif nx == 0:
+            raise ValueError('nx cannot be 0')
         if ny:
             self.ny = int(ny)
             self.y = self.ny // 2
+        elif ny == 0:
+            raise ValueError('ny cannot be 0')
         if nz:
             self.nz = int(nz)
             self.z = self.nz // 2
+        elif nz == 0:
+            raise ValueError('nz cannot be 0')
 
         if nw:
             self.nw = int(nw)
+        elif nw == 0:
+            raise ValueError('nw cannot be 0')
         if nt:
             self.nt = int(nt)
+        elif nt == 0:
+            raise ValueError('nt cannot be 0')
 
         if type(dtype) == N.dtype or dtype: # dtype can be false in python2.7 numpy1.12 scipy0.18 tifffile0.15.1
             self.dtype = dtype
@@ -170,8 +180,9 @@ class GeneralReader(object):
         self.shape = (self.ny, self.nx)
         self.ndim = len([d for d in (self.nx, self.ny, self.nz, self.nw, self.nt) if d > 1])
         self.nsec = self.nt * self.nw * self.nz
-        self.roi_start = N.zeros((3,), N.int16)
-        self.roi_size = N.array((self.nz, self.ny, self.nx), N.int16)
+        #self.roi_start = N.zeros((3,), N.int16)
+        #self.roi_size = N.array((self.nz, self.ny, self.nx), N.int16)
+        self.resetROI()
         self.setSecSize()
 
 
@@ -202,8 +213,26 @@ class GeneralReader(object):
             pass
 
     def setRoi(self, zyx_start, zyx_size):
-        self.roi_start[:] = zyx_start
-        self.roi_size[:] = zyx_size
+        """
+        zyx_start: up to 3D, (z0,y0,x0)
+        zyx_size: up to 3D, (zs,ys,xs)
+        """
+        self.roi_start[-len(zyx_start):] = zyx_start
+        self.roi_size[-len(zyx_size):] = zyx_size
+
+    def resetROI(self):
+        """
+        reset 'roi_start', 'roi_size', 't','w','z','y','x'
+        """
+        self.roi_start = N.zeros((3,), N.int16)
+        self.roi_size = N.array((self.nz, self.ny, self.nx), N.int16)
+        # current positions
+        self.t = self.nt // 2
+        self.w = self.nw // 2
+        self.z = self.nz // 2
+        self.y = self.ny // 2
+        self.x = self.nx // 2
+        #self.t = self.w = self.z = self.y = self.x = 0
 
     def isRoiSet(self):
         """
@@ -213,7 +242,13 @@ class GeneralReader(object):
         if N.any(self.roi_size < maxshape) or N.any(self.roi_start > 0):
             return True
  
-
+    def getRoiSlice(self):
+        """
+        return (slice(), slice(), slice())
+        """
+        return tuple([slice(s, self.roi_size[d]+s) for d, s in enumerate(self.roi_start)])
+        
+        
     def getWaveIdx(self, wave):
         """
         return index
@@ -391,35 +426,34 @@ class GeneralReader(object):
         return arr
         
 
-    def getArr(self, t=0, z=0, w=0):
+    def getArr(self, t=0, z=0, w=0, useROI=False):
         """
-        return a single section according to the dimension
+        return a single section according to the dimension and current ROI
         """
         idx = self.findFileIdx(t=t, z=z, w=w)
 
         arr = self.readSec(idx)
         arr = self.flipY(arr)
-        if self.useROI2getArr:
-            arr = arr[Ellipsis,
-                          self.roi_start[-2]:self.roi_start[-2]+self.roi_size[-2],
-                          self.roi_start[-1]:self.roi_start[-1]+self.roi_size[-1]]
+        if useROI:
+            slc = (Ellipsis,) + self.getRoiSlice()[-2:]
+            arr = arr[slc]
         return arr
 
-    def get3DArr(self, t=0, w=0, zs=None):
+    def get3DArr(self, t=0, w=0, zs=None, useROI=False):
         """
         zs: if None, all z secs, else supply sequence of z sec
         
         return a 3D stack
         """
         if zs is None:
-            if self.useROI2getArr:
+            if useROI:
                 zs = list(range(self.roi_start[0], self.roi_start[0]+self.roi_size[0]))
             else:
                 zs = list(range(self.nz))
 
         nz = len(zs)
 
-        if self.useROI2getArr:
+        if useROI:
             ny = self.roi_size[1]
             nx = self.roi_size[2]
         else:
@@ -429,7 +463,7 @@ class GeneralReader(object):
         arr = N.empty((nz, ny, nx), self.dtype)
         
         for i, z in enumerate(zs):
-            arr[i] = self.getArr(t=t, z=z, w=w)
+            arr[i] = self.getArr(t=t, z=z, w=w, useROI=useROI)
         return arr
 
     def get3DArrGenerator(self, ws=None, ts=None, ret_w_t=False, zs=None):
@@ -474,19 +508,25 @@ class GeneralReader(object):
         else:
              return list(Range)
 
-    def asarray(self):
+    def asarray(self, useROI=False):
         """
         return numpy array as shape (nt, nw, nz, ny, nx)
         """
-        img = N.empty((self.nt, self.nw, self.nz, self.ny, self.nx), self.dtype)
+        if useROI:
+            shape3D = tuple(self.roi_size)
+        else:
+            shape3D = (self.nz, self.ny, self.nx)
+
+        img = N.empty((self.nt, self.nw) + shape3D, self.dtype)
+        #img = N.empty((self.nt, self.nw, self.nz, self.ny, self.nx), self.dtype)
         for t in range(self.nt):
             for w in range(self.nw):
-                img[t,w] = self.get3DArr(t=t, w=w)
+                img[t,w] = self.get3DArr(t=t, w=w, useROI=useROI)
         return img
 
-    def arr_with_header(self):
+    def arr_with_header(self, useROI=False):
         """
-        return numpy array as shape squeeze(nt, nw, nz, ny, nx) with header
+        return numpy array as shape squeeze(nt, nw, nz, ny, nx) with header and ROI (if useROI is True, then ROI is still that of the parent array)
         """
         class header:
             def __init__(cls):
@@ -513,7 +553,7 @@ class GeneralReader(object):
                 self.header = getattr(obj, 'header', None)
                 self.roi = getattr(obj, 'roi', None)
 
-        data = N.squeeze(self.asarray()) 
+        data = N.squeeze(self.asarray(useROI=useROI)) 
         
         data = ndarray_in_imgio(data, header(), roi())
 

@@ -712,13 +712,17 @@ class BioformatsReader(AbstractReader, generalIO.GeneralReader):
         return rdr
     
 
-    def getArr(self, t=0, z=0, w=0):
+    def getArr(self, t=0, z=0, w=0, useROI=False):
         if self.is_ometiff:
             xywh = None
         else:
             xywh = N.empty((4,), N.int16)
-            xywh[:2] = self.roi_start[1:][::-1]
-            xywh[2:] = self.roi_size[1:][::-1]
+            if useROI:
+                xywh[:2] = self.roi_start[1:][::-1]
+                xywh[2:] = self.roi_size[1:][::-1]
+            else:
+                xywh[:2] = N.zeros((2,), N.int16)
+                xywh[2:] = N.array((self.nx, self.ny), N.int16)
             xywh = tuple(xywh)
 
         # spectral imaging of Olympus microscope was not read correctly by Bioformats

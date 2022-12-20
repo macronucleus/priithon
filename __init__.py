@@ -6,19 +6,19 @@ import six
 import numpy as N
 
 if sys.version_info.major == 2:
-    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO
+    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
 elif sys.version_info.major >= 3:
     try:
-        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO
+        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
     except ImportError:
-        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO
+        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
 
 uninit_javabridge = bioformatsIO.uninit_javabridge
 
 READABLE_FORMATS = []
 WRITABLE_FORMATS = []
 _names = ['seq', 'tif', 'mrc', 'bio']
-for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO]:
+for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO, nd2io]:
     reload(module)
     READABLE_FORMATS += module.READABLE_FORMATS
     WRITABLE_FORMATS += module.WRITABLE_FORMATS
@@ -52,12 +52,14 @@ def _switch(fn, read=True, *args, **kwds):
         formats = {'seq': imgSeqIO.READABLE_FORMATS,
                    'tif': multitifIO.READABLE_FORMATS,
                    'mrc': mrcIO.READABLE_FORMATS,
-                   'bio': bioformatsIO.READABLE_FORMATS}
+                   'bio': bioformatsIO.READABLE_FORMATS,
+                    'nd2': nd2io.READABLE_FORMATS}
         klasses = {'seq': imgSeqIO.ImgSeqReader,
                    'tif': multitifIO.MultiTiffReader,
                    'mrc': mrcIO.MrcReader,
                    'bio': bioformatsIO.BioformatsReader,
-                   'arr': arrayIO.ArrayReader}
+                   'arr': arrayIO.ArrayReader,
+                    'nd2': nd2io.ND2Reader}
     else: # write
         formats = {'seq': imgSeqIO.WRITABLE_FORMATS,
                    'tif': multitifIO.WRITABLE_FORMATS,
@@ -118,6 +120,8 @@ def _switch(fn, read=True, *args, **kwds):
                 return klasses['bio'](fn, *args, **kwds)
             except:
                 raise ValueError('The input file %s was not readable' % fn)
+    elif ext in nd2io.READABLE_FORMATS:
+        return klasses['nd2'](fn, *args, **kwds)
     elif read and ext in imgIO.READABLE_FORMATS:
         return imgIO.load(fn)
     elif ext in formats['mrc']:
