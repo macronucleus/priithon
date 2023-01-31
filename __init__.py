@@ -332,6 +332,8 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
             what1 = ''.join([s.upper() + str(v) for s,v in twzyx1s if v is not None])
             whats = '_'.join((what0, what1))
             base, ext = os.path.splitext(fn)
+            if ext not in WRITABLE_FORMATS:
+                ext = '.dv'
             out = base + whats + ext
             if os.path.isfile(out) and ifExists != 'overwrite':
                 raise ValueError('The output file name %s exists, please specify another output file name.' % os.path.basename(out))
