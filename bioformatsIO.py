@@ -446,13 +446,14 @@ class AbstractReader(object):
                     ome.DO_XYTZC,
                     ome.DO_XYCTZ,
                     ome.DO_XYTCZ]
+
         
     def closed(self):
         return self._closed
 
     @property
     def pixels(self):
-        return self.omexml.image(0).Pixels
+        return self.omexml.image(self.series).Pixels
 
     @property
     def nz(self):
@@ -673,11 +674,19 @@ class BioformatsReader(AbstractReader, generalIO.GeneralReader):
         if hasattr(self.omexml, 'root_node'):
             for node in self.omexml.root_node.getchildren():
                 name = repr(node).split()[1].split('}')[1].replace("'", '')
-                if name not in  ('Image', 'StructuredAnnotations'):
+                if name not in  ('Image', 'StructuredAnnotations') or (self.nseries>1 and name == 'StructuredAnnotations'):
                     self.metadata[name] = dict(list(node.items()))
                     for cnode in node.getchildren():
                         cname = repr(cnode).split()[1].split('}')[1].replace("'", '')
                         self.metadata[name][cname] = dict(list(cnode.items()))
+                elif self.nseries > 1 and name == 'Image':
+                    self.metadata.setdefault(name, [])
+                    self.metadata[name].append(dict(list(node.items())))
+                    for cnode in node.getchildren():
+                        cname = repr(cnode).split()[1].split('}')[1].replace("'", '')
+                        self.metadata[name][-1][cname] = dict(list(cnode.items()))
+                    
+                    
 
 
     def _readOMETiffHeader(self, omeformat=True):
