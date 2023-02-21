@@ -6,19 +6,19 @@ import six
 import numpy as N
 
 if sys.version_info.major == 2:
-    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
+    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
 elif sys.version_info.major >= 3:
     try:
-        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
+        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
     except ImportError:
-        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io
+        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
 
 uninit_javabridge = bioformatsIO.uninit_javabridge
 
 READABLE_FORMATS = []
 WRITABLE_FORMATS = []
 _names = ['seq', 'tif', 'mrc', 'bio']
-for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO, nd2io]:
+for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO, nd2io, cziio]:
     reload(module)
     READABLE_FORMATS += module.READABLE_FORMATS
     WRITABLE_FORMATS += module.WRITABLE_FORMATS
@@ -53,13 +53,15 @@ def _switch(fn, read=True, *args, **kwds):
                    'tif': multitifIO.READABLE_FORMATS,
                    'mrc': mrcIO.READABLE_FORMATS,
                    'bio': bioformatsIO.READABLE_FORMATS,
-                    'nd2': nd2io.READABLE_FORMATS}
+                    'nd2': nd2io.READABLE_FORMATS,
+                    'czi': cziio.READABLE_FORMATS}
         klasses = {'seq': imgSeqIO.ImgSeqReader,
                    'tif': multitifIO.MultiTiffReader,
                    'mrc': mrcIO.MrcReader,
                    'bio': bioformatsIO.BioformatsReader,
                    'arr': arrayIO.ArrayReader,
-                    'nd2': nd2io.ND2Reader}
+                    'nd2': nd2io.ND2Reader,
+                    'czi': cziio.CZIReader}
     else: # write
         formats = {'seq': imgSeqIO.WRITABLE_FORMATS,
                    'tif': multitifIO.WRITABLE_FORMATS,
@@ -122,6 +124,8 @@ def _switch(fn, read=True, *args, **kwds):
                 raise ValueError('The input file %s was not readable' % fn)
     elif ext in nd2io.READABLE_FORMATS:
         return klasses['nd2'](fn, *args, **kwds)
+    elif ext in cziio.READABLE_FORMATS:
+        return klasses['czi'](fn, *args, **kwds)
     elif read and ext in imgIO.READABLE_FORMATS:
         return imgIO.load(fn)
     elif ext in formats['mrc']:
