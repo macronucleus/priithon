@@ -11,3 +11,4 @@ __pycache__/
 *.mrc
 *.zip
 .#*
+.DS_Store
