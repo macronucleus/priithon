@@ -230,15 +230,28 @@ class MrcWriter(generalIO.GeneralWriter):
         if self.byteorder == '<':
             self.hdr.dvid = -16224 # little_indian number
 
+        # writing metadata into title
         for key, val in self.metadata.items():
+            if val:
+                msg = '%s = %s' % (key, val)
+            else:
+                msg = key
+
+            if N.bytes_(msg) in self.hdr.title:
+                continue
+
+            # try to write
             try:
-                if val:
-                    msg = '%s = %s' % (key, val)
-                else:
-                    msg = key
                 Mrc.setTitle(self.hdr, msg)
             except ValueError:
-                print('WARNING: title is full, metadata "%s" is not written' % key)
+                written = False
+                for i, s in enumerate(self.hdr.title):
+                    if not s:
+                        Mrc.setTitle(hdr, msg, i)
+                        written = True
+                        break
+                if not written:
+                    print('WARNING: title is full, metadata "%s" is not written' % key)
 
         if (self.extInts is not None or self.extFloats is not None) or self.byteorder == '<':
             # old ImageJ assumes that the dv format (byteorder == <) has extended header
