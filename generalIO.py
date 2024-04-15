@@ -6,7 +6,7 @@ IMGSEQ = ['WTZ', 'TZW', 'TWZ', 'WZT', 'ZTW', 'ZWT']
 WAVE_START = 0
 WAVE_STEP  =  1
 
-READABLE_FORMATS = WRITABLE_FORMATS = []
+READABLE_FORMATS = WRITABLE_FORMATS = ['npy']
 
 class ImageIOError(Exception):
     """
