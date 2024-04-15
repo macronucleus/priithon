@@ -48,19 +48,26 @@ class MrcReader(generalIO.GeneralReader):
         for ttl in self.hdr.title:
             if type(ttl) == N.bytes_:
                 ttl = ttl.decode('UTF-8', 'ignore')
-            if '=' in ttl:
-                key, val = ttl.split('=')
-                key = key.strip()
-                val = val.strip()
-                try:
-                    val = eval(val)
-                except:
-                    pass
+            if '=' in ttl: # this does not find separation of =
+                kvs = ttl.split('=')
+                nvs = len(kvs)
+                for i in range(nvs//2):
+                    kv = kvs[i*2:(i+1)*2]
+                    if len(kv) == 2:
+                        key, val = kv
+                        key = key.strip()
+                        val = val.strip()
+                        
+                        try:
+                            val = eval(val)
+                        except:
+                            self.metadata[key] = val
+                            #pass
             else:
                 key = ttl
                 val = ''
-            if key:
-                self.metadata[key] = val
+                if key:
+                    self.metadata[key] = val
 
         self.fp._secByteSize = self._secByteSize
 
