@@ -137,7 +137,11 @@ class spv(spvCommon):
         if not isinstance(data, F.mockNDarray):
             data = N.asanyarray(data) # 20060720 - numpy arrays don't have ndim attribute
         # 20180308
+<<<<<<< HEAD
         if data.dtype.type in [bool, N.uint32, N.uint64]:#N.bool, N.uint32, N.uint64]:
+=======
+        if data.dtype.type in [bool, N.uint32, N.uint64]:
+>>>>>>> c9dbf7a140d0a4031d6b00bb1139e4cc8f7538c1
             data = data.astype(N.uint16)
         elif data.dtype.type in [N.int32, N.int64, ]:
             data = data.astype(N.int16)
