@@ -312,15 +312,15 @@ def timeIt(execStr, nReps=1):
     
 
     if nReps==1:
-        t0 = time.clock()
+        t0 = time.perf_counter()#clock()
         exec(execStr, fr.f_locals, fr.f_globals)
-        return time.clock() - t0
+        return time.perf_counter() - t0 #clock() - t0
     else:
         _ttt = N.empty(shape=nReps, dtype=N.float64)
         for _i in range(nReps):
             t0 = time.clock()
             exec(execStr, fr.f_locals, fr.f_globals)
-            _ttt[_i] = time.clock() - t0
+            _ttt[_i] = time.perf_counter() - t0 #clock() - t0
         return mmms(_ttt)
 
 def reloadAll(verbose=False, repeat=1, hiddenPriithon=True):
@@ -3185,7 +3185,7 @@ def calc_threshold_otsu3(a, histYX=None, retEM=False, retImg=False):
     x1,x2,x3 = x[Tk1], x[Tk2], x[Tk3]
 
     if retImg:
-        qq = N.select([a>x3,a>x2,a>x1], [3,2,N.ones(a.shape, dtype=N.uint8)])
+        qq = N.select([a>x3,a>x2,a>x1], [3,2,N.ones(a.shape)])#, dtype=N.uint8)])
         return qq
     if retEM:
         omeg_1 = P[Tk1]

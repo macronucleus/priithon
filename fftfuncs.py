@@ -284,7 +284,7 @@ def radialPhiArr(shape, func, orig=None, dtype='float32'):
     """
     shape = _normalize_shape(shape)
     if orig is None:
-        orig = (N.array(shape, dtype=N.float)-1) / 2.
+        orig = (N.array(shape, dtype=float)-1) / 2.
     else:
         try:
             oo = float(orig)
@@ -327,7 +327,7 @@ def radialArr(shape, func, orig=None, wrap=False, dtype='float32'):
         shape = (shape,)
 
     if orig is None:
-        orig = (N.array(shape, dtype=N.float)-1) / 2.
+        orig = (N.array(shape, dtype=float)-1) / 2.
     else:
         try:
             oo = float(orig)
@@ -398,7 +398,7 @@ def maxNormRadialArr(shape, func, orig=None, wrap=0, dtype='float32'):
        """
     shape = _normalize_shape(shape)
     if orig is None:
-        orig = (N.array(shape, dtype=N.float)-1) / 2.
+        orig = (N.array(shape, dtype=float)-1) / 2.
     else:
         try:
             oo = float(orig)
@@ -1355,7 +1355,7 @@ def convolve(a,b, conj=0, killDC=0, minFdtype='float32'):
 
 
 def drawLine(a, p0, p1, val=1., includeLast=True):
-    p = N.asarray(p0, N.float)
+    p = N.asarray(p0, float)
     p1= N.asarray(p1)
     delta = p1-p
     steppingAxis = delta.argmax()
@@ -1376,7 +1376,7 @@ def drawHexPattern2d(a, d=20, sizeYX=None, yx0=(0,0), val=1):
     grid strats at corner pixel yx0
     """
     if sizeYX is None:
-        sizeYX = N.array(a.shape, dtype=N.float) - yx0
+        sizeYX = N.array(a.shape, dtype=float) - yx0
         
     for i in range(int(float(sizeYX[1])/d)):
         for j in range(int(sizeYX[0]/(3.**.5/2 * d))):
