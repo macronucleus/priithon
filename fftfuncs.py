@@ -16,7 +16,7 @@ def __fromfunction(f, s, t):
     a = N.fromfunction(f,s)
     if isinstance(t, six.string_types):
         tname = t
-    elif hasintance(t, 'name'):
+    elif hasattr(t, 'name'):#hasintance(t, 'name'):
         tname = t.name
     else:
         raise ValueError('data type %s not understood' % t)

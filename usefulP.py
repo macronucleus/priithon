@@ -73,10 +73,16 @@ def plotDatapoints(dataset=0, figureNo=None):
 
     figureNo None means "current"
     """
-    fig = _getFig(figureNo)
+    try:
+        import wxmplot.interactive as wi
+        fig = wi.get_plot_window()
+        axes = fig.panel.axes
+        return N.array(fig.panel.conf.data_save[axes][dataset])
+    except ImportError:
+        fig = _getFig(figureNo)
 
-    a = N.asarray( fig.client.line_list[dataset].points )
-    return N.transpose(a)
+        a = N.asarray( fig.client.line_list[dataset].points )
+        return N.transpose(a)
 
                     
 def plotGetXminmax(figureNo=None):
@@ -430,6 +436,7 @@ def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None
                         fig._sebCurrentColorIndex = 0
                 else:
                     fig = plt.plot(x, arr[i], **csm)
+                plt._active = fig
 
         plt._active = fig
        # if hold:
@@ -584,7 +591,22 @@ def _formatcsm(c, overwriteHold=False):
         #print('index', fig._sebCurrentColorIndex)
         csm = plot_colors[ i % len(plot_colors) ]+c
     else:
-        csm = plot_colors[0] + c
+        if overwriteHold:
+            if fig and not hasattr(fig, "_sebCurrentColorIndex"):
+                fig._sebCurrentColorIndex = 0
+                fig._sebCurrentColorIndex +=1
+                i = fig._sebCurrentColorIndex
+            elif fig:
+                fig._sebCurrentColorIndex +=1
+                i = fig._sebCurrentColorIndex
+            else:
+                i = 0
+        else:
+            i = 0
+            if fig:
+                fig._sebCurrentColorIndex = i
+        csm = plot_colors[i] + c
+        
         #fig._sebCurrentColorIndex = 0
 
     #print(c, csm)#, fig._sebCurrentColorIndex)

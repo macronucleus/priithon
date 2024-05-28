@@ -854,7 +854,7 @@ set image aspect ratio (y/x factor for display)
 
            
 
-    def readGLviewport(self, clip=False, flipY=True, copy=True):
+    def readGLviewport(self, clip=False, flipY=True, copy=True, sx=0, sy=0):
         """returns array with r,g,b values from "what-you-see"
             shape(3, height, width)
             type=UInt8
@@ -888,27 +888,34 @@ set image aspect ratio (y/x factor for display)
         glPixelTransferf(GL_GREEN_BIAS, 0)
         glPixelTransferf(GL_BLUE_BIAS,  0)
 
-        b=glReadPixels(0,0, self.m_w, self.m_h,
-                       GL_RGB,GL_UNSIGNED_BYTE)
+        # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
+        # https://discuss.wxpython.org/t/buttons-on-top-of-glcanvas/34540/6
+        size = self.GetClientSize()
+        width = int(size.width * self.GetContentScaleFactor()+.5)
+        height = int(size.height * self.GetContentScaleFactor()+.5)
+        b = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
         
-        bb=N.ndarray(buffer=b, shape=(self.m_h,self.m_w,3),
+        bb=N.ndarray(buffer=b, shape=(height,width,3),
                    dtype=N.uint8) #, aligned=1)
 
         cc = N.transpose(bb, (2,0,1))
 
         if clip:
-            x0,y0, s,a = int(self.m_x0), int(self.m_y0),self.m_scale,self.m_aspectRatio
+            # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
+            cs = self.GetContentScaleFactor()
+            #x0,y0, s,a = int(self.m_x0), int(self.m_y0),self.m_scale,self.m_aspectRatio
+            x0,y0, s,a = int(self.m_x0*cs+.5), int(self.m_y0*cs+.5),self.m_scale,self.m_aspectRatio
             if hasattr(self, "m_imgArr"):
                 ny,nx = self.m_imgArr.shape
             else:
                 ny,nx = self.m_imgList[0][2].shape
-            nx,ny = int(nx*s +.5), int(ny*s*a + .5)
+            nx,ny = int(nx*cs*s +.5), int(ny*cs*s*a + .5)
             x1,y1 = x0+ nx, y0+ny
 
-            x0 = N.clip(x0, 0, self.m_w)
-            x1 = N.clip(x1, 0, self.m_w)
-            y0 = N.clip(y0, 0, self.m_h)
-            y1 = N.clip(y1, 0, self.m_h)
+            x0 = N.clip(x0, 0, int(self.m_w*cs+.5))
+            x1 = N.clip(x1, 0, int(self.m_w*cs+.5))
+            y0 = N.clip(y0, 0, int(self.m_h*cs+.5))
+            y1 = N.clip(y1, 0, int(self.m_h*cs+.5))
             nx,ny = x1-x0, y1-y0
             cc=cc[:,y0:y1,x0:x1]
         #else:
