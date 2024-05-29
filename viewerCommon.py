@@ -854,7 +854,7 @@ set image aspect ratio (y/x factor for display)
 
            
 
-    def readGLviewport(self, clip=False, flipY=True, copy=True, sx=0, sy=0):
+    def readGLviewport(self, clip=False, flipY=True, copy=True):
         """returns array with r,g,b values from "what-you-see"
             shape(3, height, width)
             type=UInt8
@@ -863,6 +863,8 @@ set image aspect ratio (y/x factor for display)
             if copy == 0 returns non-contiguous array!!!
 
         """
+        import sys, platform
+        
         self.m_zoomChanged = True
         self.Refresh(0)
         
@@ -890,9 +892,14 @@ set image aspect ratio (y/x factor for display)
 
         # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
         # https://discuss.wxpython.org/t/buttons-on-top-of-glcanvas/34540/6
+        if sys.platform == 'darwin' and platform.processor == 'arm':
+            cs = self.GetContentScaleFactor()
+        else:
+            cs = 1
+
         size = self.GetClientSize()
-        width = int(size.width * self.GetContentScaleFactor()+.5)
-        height = int(size.height * self.GetContentScaleFactor()+.5)
+        width = int(size.width * cs + .5)# * self.GetContentScaleFactor()+.5)
+        height = int(size.height * cs + .5)# * self.GetContentScaleFactor()+.5)
         b = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
         
         bb=N.ndarray(buffer=b, shape=(height,width,3),
@@ -902,7 +909,7 @@ set image aspect ratio (y/x factor for display)
 
         if clip:
             # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
-            cs = self.GetContentScaleFactor()
+            #cs = 1#self.GetContentScaleFactor()
             #x0,y0, s,a = int(self.m_x0), int(self.m_y0),self.m_scale,self.m_aspectRatio
             x0,y0, s,a = int(self.m_x0*cs+.5), int(self.m_y0*cs+.5),self.m_scale,self.m_aspectRatio
             if hasattr(self, "m_imgArr"):
