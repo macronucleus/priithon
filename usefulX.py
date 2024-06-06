@@ -1784,6 +1784,8 @@ def vColMap(id=-1, colmap="", reverse=0):
       lo[g]       log-scale
       mi[nmaxgray] (both mi or mm work)
       bl[ackbody]
+      ma[gma]
+      vi[ridis]
       ra[inbow]
       wh[eel] red-green-blue-red
       wh[eel]XX  (last two characters must be digits: number-of-wheel-cycles)
@@ -1798,12 +1800,16 @@ def vColMap(id=-1, colmap="", reverse=0):
         colmap = colmap.lower()
         if colmap == "":
             v.cmnone()
-        elif   colmap.startswith("bl"):
+        elif colmap.startswith("bl"):
             v.cmblackbody(reverse=reverse)
         elif colmap.startswith("ra"):
             v.cmcol(reverse=reverse)
         elif colmap.startswith("lo"):
             v.cmlog()
+        elif colmap.startswith("ma"):
+            v.cmmagma()
+        elif colmap.startswith("vi"):
+            v.cmviridis()
         elif colmap.startswith("mm") or colmap.startswith("mi"):
             v.cmGrayMinMax()
         elif colmap.startswith("wh"):
@@ -1919,7 +1925,8 @@ def vCopyToClipboard(v_id=-1, clip=True):
     aa = v_id.readGLviewport(clip=clip, flipY=True, copy=0)
     ny,nx = aa.shape[-2:]
 
-    im = wx.ImageFromData(nx,ny,aa.transpose((1,2,0)).tostring())
+    #im = wx.ImageFromData(nx,ny,aa.transpose((1,2,0)).tostring()) -> depricated 20240606
+    im = wx.Image(nx,ny,aa.transpose((1,2,0)).tobytes())
     #test im.SaveFile("clipboard.png", wx.BITMAP_TYPE_PNG)
     bi=im.ConvertToBitmap()
     bida=wx.BitmapDataObject(bi)

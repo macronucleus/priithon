@@ -274,5 +274,8 @@ class spvCommon:
 
         self.keyShortcutTable[ 0, 'r' ] = self.viewer.OnReload
 
+        if hasattr(self.viewer, 'OnSaveClipboard'):
+            self.keyShortcutTable[ wx.MOD_CMD, 'c' ] = self.viewer.OnSaveClipboard
+
         self.normalizeKeyShortcutTable()
 

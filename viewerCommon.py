@@ -743,9 +743,9 @@ class GLViewerCommon(wxgl.GLCanvas):
 
         flipY=1
         if flipY:
-            U.saveImg(self.readGLviewport(copy=1)[:, ::-1], fn)
+            U.saveImg(self.readGLviewport(clip=1, copy=1)[:, ::-1], fn)
         else:
-            U.saveImg(self.readGLviewport(copy=1), fn)
+            U.saveImg(self.readGLviewport(clip=1, copy=1), fn)
         
         Y.shellMessage("### screenshot saved to '%s'\n"%fn)
 
@@ -867,6 +867,7 @@ set image aspect ratio (y/x factor for display)
         
         self.m_zoomChanged = True
         self.Refresh(0)
+        wx.YieldIfNeeded()
         
         self.SetCurrent(self.context)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
@@ -892,7 +893,7 @@ set image aspect ratio (y/x factor for display)
 
         # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
         # https://discuss.wxpython.org/t/buttons-on-top-of-glcanvas/34540/6
-        if sys.platform == 'darwin' and platform.processor == 'arm':
+        if sys.platform == 'darwin' and platform.processor() == 'arm':
             cs = self.GetContentScaleFactor()
         else:
             cs = 1

@@ -627,6 +627,7 @@ class spv(spvCommon):
         ### size = (400,400)
         if size is None:
             height,width = self.data.shape[-2:] #20051128 self.img.shape
+            height += 40 # added 20240606
             if height//2 == (width-1):  ## real_fft2d
                 width = (width-1)*2
             if width>600 or height>600:
