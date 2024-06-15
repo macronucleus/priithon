@@ -893,7 +893,9 @@ set image aspect ratio (y/x factor for display)
 
         # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
         # https://discuss.wxpython.org/t/buttons-on-top-of-glcanvas/34540/6
-        if sys.platform == 'darwin' and platform.processor() == 'arm':
+        ver = wx.version()
+        major, minor = ver.split('.')[:2]
+        if int(major) >= 4 and int(minor) >= 1:#sys.platform == 'darwin' and platform.processor() == 'arm':
             cs = self.GetContentScaleFactor()
         else:
             cs = 1

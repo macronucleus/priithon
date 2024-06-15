@@ -58,12 +58,16 @@ def _col(c, overwriteHold=False):
     return plot_colors[ i % len(plot_colors) ]+c
 
 def _getFig(figureNo):
-    from . import plt
-    if figureNo is None:
-        plt.validate_active()
-        fig = plt.interface._active
-    else:
-        fig = plt.interface._figure[figureNo]
+    try:
+        import wxmplot.interactive as wi
+        fig = wi.get_plot_window()
+    except ImportError:
+        from . import plt
+        if figureNo is None:
+            plt.validate_active()
+            fig = plt.interface._active
+        else:
+            fig = plt.interface._figure[figureNo]
 
     return fig
 
@@ -157,17 +161,25 @@ def plotSetTitle(title='', figureNo=None):
     """
     fig = _getFig(figureNo)
 
-    fig.client.title.text=title
-    fig.client.update()
+    if hasattr(fig, 'client'):
+        fig.client.title.text=title
+        fig.client.update()
+    else:
+        fig.set_title(title)
+        
 def plotSetXTitle(title='', figureNo=None):
     """
     title = '' means <no title>
     figureNo None means "current"
     """
     fig = _getFig(figureNo)
+    if hasattr(fig, 'client'):
 
-    fig.client.x_title.text=title
-    fig.client.update()
+        fig.client.x_title.text=title
+        fig.client.update()
+    else:
+        fig.set_xlabel(title)
+        
 def plotSetYTitle(title='', figureNo=None):
     """
     title = '' means <no title>
@@ -175,8 +187,11 @@ def plotSetYTitle(title='', figureNo=None):
     """
     fig = _getFig(figureNo)
 
-    fig.client.y_title.text=title
-    fig.client.update()
+    if hasattr(fig, 'client'):
+        fig.client.y_title.text=title
+        fig.client.update()
+    else:
+        fig.set_ylabel(title)
 
 def plotSetAxis(setting='equal', figureNo=None):
     """
@@ -401,7 +416,7 @@ def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None
         arr2 = N.abs(arr2)
         
     
-    x=arr1
+    x=N.squeeze(arr1)
     arr=arr2
 
     if logX:
