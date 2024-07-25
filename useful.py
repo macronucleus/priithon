@@ -318,7 +318,7 @@ def timeIt(execStr, nReps=1):
     else:
         _ttt = N.empty(shape=nReps, dtype=N.float64)
         for _i in range(nReps):
-            t0 = time.clock()
+            t0 = time.perf_counter()#clock()
             exec(execStr, fr.f_locals, fr.f_globals)
             _ttt[_i] = time.perf_counter() - t0 #clock() - t0
         return mmms(_ttt)

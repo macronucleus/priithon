@@ -365,7 +365,7 @@ def plotSetParent(parent=None):
     from . import plt
     plt.interface._parent = parent
     
-def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTranspose=True, logZeroOffset=.01, figureNo=None):
+def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTranspose=True, logZeroOffset=.01, figureNo=None, parent=None):
     """
     arr1 is a "table" of x,y1,...,yn values
     if arr2 is given than arr1 contains only the x values
@@ -434,10 +434,10 @@ def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None
         if len(arr.shape) == 1:
             csm = _formatcsm(c, overwriteHold=hold)
             if hold:
-                fig = plt.plot(x, arr, **csm)
+                fig = plt.plot(x, arr, parent=parent, **csm)
             else:
                 fig = plt.newplot(
-                    x, arr, **csm)
+                    x, arr, parent=parent, **csm)
         else:
             data = []
             for i in range(arr.shape[0]):
@@ -445,12 +445,12 @@ def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None
                 csm = _formatcsm(c, overwriteHold=holdornot)#i>0)
                 if i==0:
                     if hold:
-                        fig = plt.plot(x, arr[i], **csm)
+                        fig = plt.plot(x, arr[i], parent=parent, **csm)
                     else:
-                        fig = plt.newplot(x, arr[i], **csm)
+                        fig = plt.newplot(x, arr[i], parent=parent, **csm)
                         fig._sebCurrentColorIndex = 0
                 else:
-                    fig = plt.plot(x, arr[i], **csm)
+                    fig = plt.plot(x, arr[i], parent=parent, **csm)
                 plt._active = fig
 
         plt._active = fig
@@ -493,7 +493,7 @@ def plotxy(arr1,arr2=None,c=plot_defaultStyle, logY=False, logX=False, hold=None
         if figureNo is not None:
             plt.interface._active = _oldActive
 
-def ploty(arrY, c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTranspose=True, logZeroOffset=.01, figureNo=None, symbolSize=0):
+def ploty(arrY, c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTranspose=True, logZeroOffset=.01, figureNo=None, symbolSize=0, parent=None):
     """
     arrY is a "table" of y1,...,yn values
     x-values of 0,1,2,3,4 are used as needed
@@ -527,7 +527,7 @@ def ploty(arrY, c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTra
             import wxmplot.interactive as plt
             n = arrY.shape[0]
             x = N.arange(n)
-            plotxy(x, arrY,c, logY, logX, hold, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo)
+            plotxy(x, arrY,c, logY, logX, hold, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo, parent=parent)
         except ImportError:
             #if logX:
             #    raise ValueError, 'Cannot use logX=True to plot x="axis-index"'
@@ -561,12 +561,12 @@ def ploty(arrY, c=plot_defaultStyle, logY=False, logX=False, hold=None, smartTra
             
         try:
             import wxmplot.interactive as plt
-            plotxy(x, arrY,c, logY, logX, hold=hold, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo)
+            plotxy(x, arrY,c, logY, logX, hold=hold, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo, parent=parent)
         except ImportError:
             if hold is not None:
                 plothold(hold, figureNo)
             
-            plotxy(x, arrY,c, logY, logX, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo)
+            plotxy(x, arrY,c, logY, logX, smartTranspose=smartTranspose, logZeroOffset=logZeroOffset, figureNo=figureNo, parent=parent)
 
 def _formatcsm(c, overwriteHold=False):
     import wxmplot.interactive as wi
@@ -642,7 +642,7 @@ def _formatcsm(c, overwriteHold=False):
                 csmdic['style'] = stldic[c]
         else:
             csmdic['marker'] = c
-    print(csmdic)
+    #print(csmdic)
     return csmdic
         
 def plothold(on=1, figureNo=None):
