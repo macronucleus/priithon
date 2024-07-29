@@ -196,7 +196,7 @@ class GeneralReader(object):
             if not hasattr(self, '_secExtraByteSize'):
                 self._secExtraByteSize = 0
             npxls = self.ny * self.nx
-            self._secByteSize = int(N.nbytes[self.dtype] * npxls) + self._secExtraByteSize
+            self._secByteSize = int(N.dtype(self.dtype.__name__).itemsize * npxls) + self._secExtraByteSize
         self.doOnSetDim()
 
     def doOnSetDim(self):
@@ -396,6 +396,33 @@ class GeneralReader(object):
             self.axes_w = w
             
         return int(i)
+
+    def findDimFromIdx(self, i=0):
+        if self.imgSequence == 0:
+            z = i % (self.nw * self.nt)
+            t = ((i-z) / (self.nz)) % self.nt
+            w = (i-z)//(self.nz*self.nt)
+        elif self.imgSequence == 1:
+            w = i % (self.nt * self.nz)
+            z = ((i-w) / (self.nw)) % self.nz
+            t = (i-w)//(self.nw*self.nz)
+        elif self.imgSequence == 2:
+            z = i % (self.nw * self.nt)
+            w = ((i-z) / (self.nz)) % self.nw
+            t = (i-z)//(self.nz*self.nw)
+        elif self.imgSequence == 3:
+            t = i % (self.nw * self.nz)
+            z = ((i-t) / (self.nt)) % self.nz
+            w = (i-t) / (self.nz*self.nt)
+        elif self.imgSequence == 4:
+            w = i % (self.nt * self.nz)
+            t = ((i-w) / (self.nw)) % self.nt
+            z = (i-w) / (self.nw*self.nt)
+        elif self.imgSequence == 5:
+            t = i % (self.nw * self.nz)
+            w = ((i-t) / (self.nt)) % self.nw
+            z = (i-t) / (self.nw*self.nt)
+        return t, w, z
 
     def readSec(self, i=None):
         """
