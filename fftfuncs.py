@@ -97,7 +97,7 @@ def copyPadded(a,b, pad=0):
     ######## print
     dS = N.subtract(b.shape, a.shape)
     # if padding wanted and if NOT all UN-padding
-    if pad is not None and not N.alltrue( dS <= 0 ):
+    if pad is not None and not N.all( dS <= 0):#N.alltrue( dS <= 0 ):
         b[:] = pad #HACK - because not very efficient !?
        
     for i in range(a.ndim):
