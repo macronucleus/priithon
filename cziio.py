@@ -1,3 +1,5 @@
+import numpy as N
+
 try:
     from . import generalIO
 except ImportError:
@@ -36,14 +38,16 @@ class CZIReader(generalIO.GeneralReader):
         img = meta['ImageDocument']['Metadata']['Information']['Image']
         nx = img['SizeX']
         ny = img['SizeY']
-        nw = img.get('SizeC', 1)
-        nz = img.get('SizeZ', 1)
+        nw = img.get('SizeC', 1) * img.set('Size0')
+        nz = img.get('SizeZ', 1) * img.get('SizeH', 1) * img.get('SizeR', 1) * img.get('SizeS', 1) * img.get('SizeI', 1) * img.get('SizeB', 1) * img.get('SizeM', 1) * img.get('SizeV', 1)
+        # for SIM, it is phase-rot-z order
         if 'T' in self.fp.axes:
             nt = self.fp.shape[self.fp.axes.index('T')]
         else:
             nt = 1
 
-        axes = self.fp.axes[:-3].replace('C', 'W').replace('B', '').replace('V', '').replace('YX0', '')
+        #axes = self.fp.axes[:-3].replace('C', 'W').replace('B', '').replace('V', '').replace('YX0', '')
+        axes = self._findAxes().replace('C', 'W')
         imgSeq = self.findImgSequence(axes)
 
         channels = img['Dimensions']['Channels']['Channel']
@@ -74,6 +78,33 @@ class CZIReader(generalIO.GeneralReader):
         subblock = sdir.data_segment()
         a = subblock.data(raw=False, resize=True, order=0)
         return a.ravel().reshape((self.ny, self.nx))[xy0[0]:xy1[0], xy0[1]:xy1[1]]
+
+    def _findAxes(self):
+        axes = self.fp.axes[:-3] # remove YX0
+        shape = N.array(self.fp.shape[:-2]) # remove YX
+        squeeze = shape - 1
+        idx = [i for i, a in enumerate(axes) if squeeze[i]]
+        axe2 = [axes[i] for i in idx]
+        shape2 = [shape[i] for i in idx]
+        axe3 = [a for a in axe2] # copy
+        
+        starts = []
+        for sdir in self.fp.filtered_subblock_directory:
+            start = [sdir.dimension_entries[i].start for i in idx]
+            starts.append(start)
+
+        diff = N.diff(starts, axis=0)
+        for i, a in enumerate(axe2):
+            for j in range(N.prod(shape2)):
+                if 1 in diff[j]:
+                    id0 = N.argwhere(diff[j]==1)[0][0]
+                    axe3[-1-i] = axe2[id0]
+                    #diff = N.delete(diff, id0, -1)
+                    diff[:,id0] = 0
+                    break
+        
+        return ''.join(axe3)
+                
     
 # map dimension character to description
 DIMENSIONS = {
@@ -83,11 +114,11 @@ DIMENSIONS = {
     'C': 'Channel',
     'Z': 'Slice',  # depth
     'T': 'Time',
-    'R': 'Rotation',
+    'R': 'Rotation', # e.g. SIM rotation
     'S': 'Scene',  # contiguous regions of interest in a mosaic image
     'I': 'Illumination',  # direction
     'B': 'Block',  # acquisition
     'M': 'Mosaic',  # index of tile for compositing a scene
-    'H': 'Phase',  # e.g. Airy detector fibers
+    'H': 'Phase',  # e.g. Airy detector fibers, SIM phase
     'V': 'View',  # e.g. for SPIM
 }

@@ -109,6 +109,7 @@ class GeneralReader(object):
         return imgSeq value
         """
         axes = axis_order_string.upper()
+        axes = ''.join([a for a in axes if a in self.imgseqs[0]])
         if len(axes) <= 1:
             ## because my code tend to use t->w->z, here imgSeq = 2,
             ## however, 0 is more prevalent in the rest of world...
@@ -196,7 +197,10 @@ class GeneralReader(object):
             if not hasattr(self, '_secExtraByteSize'):
                 self._secExtraByteSize = 0
             npxls = self.ny * self.nx
-            self._secByteSize = int(N.dtype(self.dtype.__name__).itemsize * npxls) + self._secExtraByteSize
+            try:
+                self._secByteSize = int(N.dtype(self.dtype.__name__).itemsize * npxls) + self._secExtraByteSize
+            except(AttributeError):
+                self._secByteSize = int(N.dtype(self.dtype).itemsize * npxls) + self._secExtraByteSize
         self.doOnSetDim()
 
     def doOnSetDim(self):

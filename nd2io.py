@@ -71,7 +71,7 @@ class ND2Reader(generalIO.GeneralReader):
 
 
     def readSec(self, i=None):
-        arr = self.fp._get_frame(i)
+        arr = self.fp.read_frame(i) #_get_frame(i)
         if arr.ndim == 3 and self.axes[0] in ('S', 'C', 'W'):# == 'SYX'
             arr = arr[self.axes_w]
         elif arr.ndim == 3 and self.axes[-1] in ('S', 'C', 'W'):# == 'SYX'

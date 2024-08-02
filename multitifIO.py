@@ -378,11 +378,12 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                 if self.style == 'imagej':
                     colormapped = self.fp._colormap is not None
                     isrgb = self.fp._storedshape[-1] in (3, 4)
-                    des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
+                    #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
+                    des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
                 elif self.style == 'ome':
                     if self.fp._subifdslevel < 0:
                         datashape = self.makeShape(squeeze=True)
-                        storedshape = (N.product(shape[:3]), 1, 1, self.ny, self.nx, 1)
+                        storedshape = (N.prod(shape[:3]), 1, 1, self.ny, self.nx, 1)
                         self.fp._ome.addimage(
                             self.dtype,
                             datashape,
