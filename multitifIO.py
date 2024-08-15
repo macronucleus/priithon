@@ -358,7 +358,7 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         tifversion = tifffile.__version__.split('.')
         if int(tifversion[0]) == 0 and int(tifversion[1]) <= 14:
             self.fp = tifffile.TiffWriter(self.fn, software=self.software, imagej=imagej)#, ome=ome)#, bigtiff=not(imagej))
-        elif int(tifversion[0]) == 0 and int(tifversion[1]) == 15:
+        elif (int(tifversion[0]) == 0 and int(tifversion[1]) == 15) or (int(tifversion[0]) == 2019 and int(tifversion[1])==7):
             self.fp = tifffile.TiffWriter(self.fn, imagej=imagej)
         else:
             self.fp = tifffile.TiffWriter(self.fn, imagej=imagej, ome=ome)#, bigtiff=not(imagej))
