@@ -27,6 +27,7 @@ class GeneralReader(object):
         self.imgseqs = IMGSEQ
         self.metadata = {}
         self.ex_metadata = {}
+        self.optics_data = {}
         #self.useROI2getArr = False
         self.flip_required = True
         
@@ -324,7 +325,7 @@ class GeneralReader(object):
             elif self.imgSequence == 3:
                 shape = (self.nw,self.nz,self.nt) + yx
             elif self.imgSequence == 4:
-                shape = (self.nt,self.nt,self.nw) + yx
+                shape = (self.nz,self.nt,self.nw) + yx
             elif self.imgSequence == 5:
                 shape = (self.nz,self.nw,self.nt) + yx
         elif len(self.axes) == 3 and self.axes[0] in ('S', 'C', 'W'):

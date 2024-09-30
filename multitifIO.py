@@ -381,13 +381,20 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                     #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
                     des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
                 elif self.style == 'ome':
+                    #self.metadata['DimensionOrder'] = 'XY'
                     if self.fp._subifdslevel < 0:
-                        datashape = self.makeShape(squeeze=True)
+                        datashape = self.makeShape(squeeze=(False))#True)
                         storedshape = (N.prod(shape[:3]), 1, 1, self.ny, self.nx, 1)
+                        #axes = self.metadata['Pixels']['DimensionOrder'][::-1]
+                        #axes = self.metadata['Pixels']['axes']
+                       # axes = self.metadata['axes']
+                       # print(self.metadata, datashape, axes)
+
                         self.fp._ome.addimage(
                             self.dtype,
                             datashape,
                             storedshape,
+                          #  axes=axes,
                             **self.metadata
                             )
                     des = self.fp._ome.tostring(declaration=True).encode()
@@ -535,11 +542,33 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         return metadata
 
     def makeOMEMetadata(self):
-        axes = self.makeDimensionStr(squeeze=True).replace('W', 'C')
+        if self.nt == 1 and self.nw==1:
+            self.imgSequence = 0
+        elif self.nt == 1 and self.nz == 1:
+            self.imgSequence = 1
+        elif self.nw == 1 and self.nz == 1:
+            self.imgSequence = 3
+        elif self.nt == 1:
+            if self.imgSequence == 0:
+                self.imgSequence = 2
+            elif self.imgSequence == 4:
+                self.imgSequence = 1
+        elif self.nw == 1:
+            if self.imgSequence == 2:
+                self.imgSequence = 0
+            elif self.imgSeuqnce == 5:
+                self.imgSeuqnce = 3
+        elif self.nz == 1:
+            if self.imgSequence == 1:
+                self.imgSequence = 4
+            elif self.imgSequence == 3:
+                self.imgSequence = 5
+
+        axes = self.makeDimensionStr(squeeze=False).replace('W', 'C')
         dimension = self.makeDimensionStr(squeeze=False).replace('W', 'C')[::-1]
         
         metadata = {
-            'Pixels': {
+            #'Pixels': {
                     'axes': axes,
                     'Interleaved': False,
                     'Type': pixeltype_to_ome(self.dtype),
@@ -555,12 +584,13 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                     'PhysicalSizeXUnit': u'\xb5'+'m',
                     'PhysicalSizeYUnit': u'\xb5'+'m',
                     'PhysicalSizeZUnit': u'\xb5'+'m',
-                }}
+                }#}
         channels = [{} for w in range(len(self.wave))]
         for w, wave in enumerate(self.wave):
             channels[w]['EmissionWavelength'] = wave
             channels[w]['EmissionWavelengthUnit'] = 'nm'
-        metadata['Pixels']['Channel']  = channels
+        #metadata['Pixels']['Channel']  = channels
+        metadata['Channels'] = channels
                 
         return metadata
     

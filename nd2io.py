@@ -10,6 +10,7 @@ import numpy as N
 
 try:
     import nd2
+    # should be > 0.10.1, 0.5.3 did not work (no read_frame)
     from nd2._util import AXIS
     WRITABLE_FORMATS = ()
     READABLE_FORMATS = ('nd2',)

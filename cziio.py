@@ -38,7 +38,7 @@ class CZIReader(generalIO.GeneralReader):
         img = meta['ImageDocument']['Metadata']['Information']['Image']
         nx = img['SizeX']
         ny = img['SizeY']
-        nw = img.get('SizeC', 1) * img.set('Size0')
+        nw = img.get('SizeC', 1) * img.get('Size0', 1)
         nz = img.get('SizeZ', 1) * img.get('SizeH', 1) * img.get('SizeR', 1) * img.get('SizeS', 1) * img.get('SizeI', 1) * img.get('SizeB', 1) * img.get('SizeM', 1) * img.get('SizeV', 1)
         # for SIM, it is phase-rot-z order
         if 'T' in self.fp.axes:
@@ -51,11 +51,18 @@ class CZIReader(generalIO.GeneralReader):
         imgSeq = self.findImgSequence(axes)
 
         channels = img['Dimensions']['Channels']['Channel']
+        if type(channels) == dict: # nw=1
+            channels = [channels]
         waves = []
         self.exc = []
         for channel in channels:
             waves.append(channel['EmissionWavelength'])
             self.exc.append(channel['ExcitationWavelength'])
+            if waves[-1] == self.exc[-1]:
+                try:
+                    waves[-1] = (meta['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock']['MultiTrackSetup']['TrackSetup']['CenterWavelength'])*(10**9)
+                except KeyError:
+                    pass
 
         self.setDim(nx, ny, nz=nz, nt=nt, nw=nw, dtype=self.fp.dtype, wave=waves, imgSequence=imgSeq)
 
@@ -66,6 +73,13 @@ class CZIReader(generalIO.GeneralReader):
             pdic['p%s' % s['Id'].lower()] = s['Value']*(10**6)
 
         self.setPixelSize(**pdic)
+
+        try:
+            self.optics_data['na'] = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']['LensNA']
+            self.optics_data['n1'] = img['ObjectiveSettings']['RefractiveIndex']
+        except KeyError:
+            pass
+            
 
     def readMetaData(self):
         self.metadata = self.fp.metadata(False)
@@ -96,7 +110,7 @@ class CZIReader(generalIO.GeneralReader):
         diff = N.diff(starts, axis=0)
         for i, a in enumerate(axe2):
             for j in range(N.prod(shape2)):
-                if 1 in diff[j]:
+                if j < diff.shape[0] and 1 in diff[j]:
                     id0 = N.argwhere(diff[j]==1)[0][0]
                     axe3[-1-i] = axe2[id0]
                     #diff = N.delete(diff, id0, -1)
