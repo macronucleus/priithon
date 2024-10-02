@@ -81,7 +81,7 @@ def _switch(fn, read=True, *args, **kwds):
         
 
     ## --- JDK check----
-    _allfmt = formats['tif'] + formats['mrc'] + formats['seq'] + formats['bio']
+    _allfmt = formats['tif'] + formats['mrc'] + formats['seq'] + formats['bio'] + formats.get('nd2', ()) + formats.get('czi', ())
     if ext not in _allfmt and ext in bioformatsIO.bioformats.READABLE_FORMATS:# and ext not in formats['bio'] and ext not in formats['seq']:
         raise ValueError(JDK_MSG % ext)
     #-------------

@@ -16,7 +16,7 @@ try:
 except ImportError:
     READABLE_FORMATS = ()
 
-class ND2Reader(generalIO.GeneralReader):
+class LifReader(generalIO.GeneralReader):
     def __init__(self, fn):
         """
         fn: file name
