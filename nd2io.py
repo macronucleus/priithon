@@ -70,9 +70,19 @@ class ND2Reader(generalIO.GeneralReader):
         # excitation wavelength
         self.exc = [cc.channel.excitationLambdaNm for cc in self.fp.metadata.channels]
 
+        try:
+            self.optics_data['na'] = [cc.microscope.objectiveNumericalAperture for cc in self.fp.metadata.channels]
+            self.optics_data['n1'] = [cc.microscope.immersionRefractiveIndex for cc in self.fp.metadata.channels]
+        except KeyError:
+            pass
+
 
     def readSec(self, i=None):
-        arr = self.fp.read_frame(i) #_get_frame(i)
+        if hasattr(self.fp, 'read_frame'):
+            arr = self.fp.read_frame(i)
+        else:
+            arr = self.fp._get_frame(i)
+            
         if arr.ndim == 3 and self.axes[0] in ('S', 'C', 'W'):# == 'SYX'
             arr = arr[self.axes_w]
         elif arr.ndim == 3 and self.axes[-1] in ('S', 'C', 'W'):# == 'SYX'

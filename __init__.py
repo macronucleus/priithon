@@ -261,6 +261,7 @@ def merge(fns, out=None, along='t'):
         out = os.path.commonprefix(fns) + '_merge.dv'
     nsecs = 0
     waves = []
+    rdrs = []
     for fn in fns:
         h = Reader(fn)
         if along == 't':
@@ -270,37 +271,42 @@ def merge(fns, out=None, along='t'):
             waves += list(h.wave)
         elif along == 'z':
             nsecs += h.nz
-        #h.close()
+        rdrs.append(h)
         
-    o = Writer(out, h)
-    if along == 't':
-        o.setDim(nt=nsecs)
-    elif along == 'w':
-        o.setDim(nw=nsecs,wave=waves)
-    elif along == 'z':
-        o.setDim(nz=nsecs)
-
-    d2 = 0
-    for fn in fns:
-        h = Reader(fn)
-        for t in range(h.nt):
-            for w in range(h.nw):
-                a = h.get3DArr(t=t, w=w)
-                if along == 't':
-                    o.write3DArr(a, t=d2+t, w=w)
-                elif along == 'w':
-                    o.write3DArr(a, t=t, w=w+d2)
-                elif along == 'z':
-                    for z in range(h.nz):
-                        o.write3DArr(a, t=t, w=w, z=z+d2)
+    #o = Writer(out, h)
+    with Writer(out, h) as o:
         if along == 't':
-            d2 += h.nt
+            o.setDim(nt=nsecs)
         elif along == 'w':
-            d2 += h.nw
+            o.setDim(nw=nsecs,wave=waves)
         elif along == 'z':
-            d2 += h.nz
-        h.close()
-    o.close()
+            o.setDim(nz=nsecs)
+        o.mergeMetadataFromReaders(rdrs, along)
+       
+
+        d2 = 0
+        for h in rdrs:#fn in fns:
+            #with Reader(fn) as h:
+            #h = rdrs
+            #h = Reader(fn)
+            for t in range(h.nt):
+                for w in range(h.nw):
+                    a = h.get3DArr(t=t, w=w)
+                    if along == 't':
+                        o.write3DArr(a, t=d2+t, w=w)
+                    elif along == 'w':
+                        o.write3DArr(a, t=t, w=w+d2)
+                    elif along == 'z':
+                        for z in range(h.nz):
+                            o.write3DArr(a, t=t, w=w, z=z+d2)
+            if along == 't':
+                d2 += h.nt
+            elif along == 'w':
+                d2 += h.nw
+            elif along == 'z':
+                d2 += h.nz
+            h.close()
+    #o.close()
 
     return out
 

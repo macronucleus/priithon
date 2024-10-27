@@ -472,6 +472,9 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         elif i is not None:
             self.seekSec(i)
 
+        #print('in writesec walking', self.metadata)
+        self.metadata = walk(self.metadata, replace)
+
         if int(tifversion[0]) >= 2020:
             offset, sec = self.fp.write(arr, resolution=self.res, metadata=self.metadata, returnoffset=True, software=self.software, photometric=photometric, contiguous=True)
         elif int(tifversion[0]) == 0 and int(tifversion[1]) <= 14:
@@ -821,9 +824,9 @@ def walk(node, func):
         for key, item in node.items():
             if isinstance(item, (list, dict)):
                 item = walk(item, func)
-            elif isinstance(key, six.string_types) and u'\xb5' in key:
+            elif isinstance(key, six.string_types):# and u'\xb5' in key:
                 key = func(key)
-            elif isinstance(item, six.string_types) and u'\xb5' in item:
+            elif isinstance(item, six.string_types):# and u'\xb5' in item:
                 item = func(item)
                 #print(key, item)
             node2[key] = item
@@ -832,7 +835,7 @@ def walk(node, func):
         for item in node:
             if isinstance(item, (list, dict)):
                 item = walk(item, func)
-            elif isinstance(item, six.string_types) and u'\xb5' in item:
+            elif isinstance(item, six.string_types):# and u'\xb5' in item:
                 item = func(item)
                 #print(key, item)
             node2.append(item)
@@ -848,4 +851,6 @@ def replace(st):
     import unicodedata
     st = st.replace(u'\xb5', u'u')
     st = unicodedata.normalize('NFKD', st)
+    st = st.encode('ascii', 'ignore').decode()
+    #print('in replace', st)
     return st

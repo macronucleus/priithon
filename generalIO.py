@@ -658,6 +658,12 @@ class GeneralWriter(GeneralReader):
         for z, a in enumerate(arr):
             self.writeArr(a, t=t, w=w, z=z)
 
+    def mergeMetadataFromReaders(self, rdrs, along='t'):
+        """
+        rdrs: list of Reader objects
+        """
+        pass
+
 
 def makeWaves(nw, start=WAVE_START, step=WAVE_STEP):
     return N.arange(start, start+step*nw, step)

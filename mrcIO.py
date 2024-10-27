@@ -73,7 +73,12 @@ class MrcReader(generalIO.GeneralReader):
 
         # excitation wavelength
         if hasattr(self.fp, 'extFloats') and self.fp.extFloats.ndim >= 2 and self.fp.extFloats.shape[-1] >= 32:
-            self.exc = self.fp.extFloats[:nw,10]
+            self.exc = N.zeros((nw,), dtype=N.float32)
+            for w in range(nw):
+                i = self.findFileIdx(w=w)
+                self.exc[w] = self.fp.extFloats[i,10]
+            
+            #self.exc = self.fp.extFloats[:nw,10]
 
     def makeHdr(self):
         """
@@ -289,6 +294,78 @@ class MrcWriter(generalIO.GeneralWriter):
 
         self.fp.writeSec(arr2D, i)
 
+    def mergeMetadataFromReaders(self, rdrs, along='t'):
+        """
+        only for mrc formats
+        """
+        nt = 0
+        nw = 0
+        nz = 0
+
+        ni = 0
+        nf = 0
+        ns = 0
+
+        for rdr in rdrs:
+            if along == 't':
+                nt += rdr.nt
+            else:
+                nt = rdr.nt
+            if along == 'w':
+                nw += rdr.nw
+            else:
+                nw = rdr.nw
+            if along == 'z':
+                nz += rdr.nz
+            else:
+                nz = rdr.nz
+
+            if hasattr(rdr.fp.hdr.NumIntegers, 'shape'):
+                ni = rdr.fp.hdr.NumIntegers[0]
+            else:
+                ni = rdr.fp.hdr.NumIntegers
+            if hasattr(rdr.fp.hdr.NumFloats, 'shape'):
+                nf = rdr.fp.hdr.NumFloats[0]
+            else:
+                nf = rdr.fp.hdr.NumFloats
+        
+        ns = nt * nw * nz
+            
+        self.fp.makeExtendedHdr(ni, nf, nSecs=ns) # this creates many instances
+        #self.fp = addExtHdrFromExt(self.fp, ni,nf)
+                                       # nf, self.fp.extInts, self.fp.extFloats)
+        #self.fp.
+
+        #print(self.fp.extFloats.shape, ns, ni, nf, self.fp._extHdrBytesPerSec)
+        d2 = 0
+        for h in rdrs:
+            for t in range(h.nt):
+                for w in range(h.nw):
+                    for z in range(h.nz):
+                        i = h.findFileIdx(t=t, w=w, z=z)
+                        ei = h.fp.extInts[i]
+                        ef = h.fp.extFloats[i]
+                        if along == 't':
+                            j = self.findFileIdx(t=d2+t, w=w, z=z)
+                        elif along == 'w':
+                            j = self.findFileIdx(t=t, w=w+d2, z=z)
+                        elif along == 'z':
+                            j = self.findFileIdx(t=t, w=w, z=z+d2)
+
+                        if j < self.fp.extInts.shape[0]:
+                            self.fp.extInts[j] = ei
+                            self.fp.extFloats[j] = ef
+                            #if z==0 and t==0:
+                            #    print(w, j, ef[10],self.fp._extHdrArray.field('float')[j][10])
+                            
+            if along == 't':
+                d2 += h.nt
+            elif along == 'w':
+                d2 += h.nw
+            elif along == 'z':
+                d2 += h.nz
+        self.fp.writeExtHeader(True)
+
 
 # functions
 
@@ -395,11 +472,12 @@ def addExtHdrFromExt(hdl, numInts=0, numFloats=0, extInts=None, extFloats=None):
 
     hdl.extInts = _reshapeExtHdr(hdl.extInts)
     hdl.extFloats = _reshapeExtHdr(hdl.extFloats)
-    extInts = _reshapeExtHdr(extInts)
-    extFloats = _reshapeExtHdr(extFloats)    
-
-    hdl.extInts[:nSecs,:numInts] = extInts[:nSecs,:numInts]
-    hdl.extFloats[:nSecs,:numFloats] = extFloats[:nSecs,:numFloats]
+    if extInts is not None:
+        extInts = _reshapeExtHdr(extInts)
+        hdl.extInts[:nSecs,:numInts] = extInts[:nSecs,:numInts]
+    if extFloats is not None:
+        extFloats = _reshapeExtHdr(extFloats)    
+        hdl.extFloats[:nSecs,:numFloats] = extFloats[:nSecs,:numFloats]
 
     return hdl
 
