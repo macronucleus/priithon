@@ -61,6 +61,8 @@ class CZIReader(generalIO.GeneralReader):
             if waves[-1] == self.exc[-1]:
                 try:
                     waves[-1] = (meta['ImageDocument']['Metadata']['Experiment']['ExperimentBlocks']['AcquisitionBlock']['MultiTrackSetup']['TrackSetup']['CenterWavelength'])*(10**9)
+                    if waves[-1] == 0:
+                        waves[-1] = self.exc[-1] * 1.075
                 except KeyError:
                     pass
 

@@ -336,13 +336,13 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         style: 'imagej', 'ome', ..., ('RGB' does not work yet)
         """
         self.style = style #imagej = imagej
-        self.metadata = metadata #{}
         self.software = software
         #self.ex_metadata = extra_metadata
         #self.extratags = ()
         self.init = False
 
         generalIO.GeneralWriter.__init__(self, fn, mode)
+        self.metadata.update(metadata) #{}
 
         if self.style == 'RGB':
             self.axes += 'S'
@@ -380,6 +380,7 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                     isrgb = self.fp._storedshape[-1] in (3, 4)
                     #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
                     des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
+                    print('writeing metaata', self.metadata)
                 elif self.style == 'ome':
                     #self.metadata['DimensionOrder'] = 'XY'
                     if self.fp._subifdslevel < 0:

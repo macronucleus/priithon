@@ -608,7 +608,7 @@ class GeneralWriter(GeneralReader):
         read dimensions, imgSequence, dtype, pixelsize from a reader
         """
         self.setPixelSize(*rdr.pxlsiz)
-        self.metadata = rdr.metadata
+        self.metadata.update(rdr.metadata)# = rdr.metadata
         self.ex_metadata = rdr.ex_metadata
         self.setDim(rdr.roi_size[-1], rdr.roi_size[-2], rdr.roi_size[-3], rdr.nt, rdr.nw, rdr.dtype, rdr.wave, rdr.imgSequence)
 

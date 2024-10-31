@@ -76,7 +76,8 @@ class MrcReader(generalIO.GeneralReader):
             self.exc = N.zeros((nw,), dtype=N.float32)
             for w in range(nw):
                 i = self.findFileIdx(w=w)
-                self.exc[w] = self.fp.extFloats[i,10]
+                if i < self.fp.extFloats.shape[0]:
+                    self.exc[w] = self.fp.extFloats[i,10]
             
             #self.exc = self.fp.extFloats[:nw,10]
 
@@ -364,6 +365,11 @@ class MrcWriter(generalIO.GeneralWriter):
                 d2 += h.nw
             elif along == 'z':
                 d2 += h.nz
+
+        self.fp.hdr.NumIntegers = self.fp.extInts.shape[-1]
+        self.fp.hdr.NumFloats = self.fp.extFloats.shape[-1]
+        self.fp.writeHeader()
+
         self.fp.writeExtHeader(True)
 
 
