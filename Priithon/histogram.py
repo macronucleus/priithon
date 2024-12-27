@@ -1,23 +1,24 @@
 """provides the histogram scaling OpenGL-based panel for Priithon's ND 2d-section-viewer"""
-from __future__ import absolute_import
-
+from __future__ import print_function
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
 #20051107 from wxPython   import wx
 import wx
-
 from wx import glcanvas
 from OpenGL import GL
 # from OpenGL import GLU   ## CHECK langur has not GLUT - debian glutg3
 #seb     from OpenGL.GLUT import *
-import Priithon_bin.glSeb as glSeb
+try:
+    import Priithon_bin.glSeb as glSeb
+except:
+    pass
 
 ## import Numeric as Num
 #from numarray import numeric as Num
 #import numarray as na
 import numpy as N
-import traceback, sys
+import traceback, sys#, socket
 from . import PriConfig
 
 ###########################################from numarray import numeric as na
@@ -101,6 +102,7 @@ Menu_FitYToSeen   =  wx.NewId()
 Menu_EnterScale   =  wx.NewId()
 #20051117 Menu_Gamma   = 1004
 
+Call_Yield_Before_SetCurrent = False
 
 HistLogModeZeroOffset = .0001
 
@@ -109,7 +111,9 @@ class MyCanvasBase(glcanvas.GLCanvas):
         glcanvas.GLCanvas.__init__(self, parent, -1, size=size, style=wx.WANTS_CHARS)
         # wxWANTS_CHARS to get arrow keys on Windows
 
+        #self.parent = parent
         self.init = False
+        self.context = glcanvas.GLContext(self) # 20141124 cocoa
         self.m_w, self.m_h = 0,0
         
         self.zoomChanged = 1
@@ -120,9 +124,15 @@ class MyCanvasBase(glcanvas.GLCanvas):
         # initial mouse position
         #seb self.lastx = self.x = 30
         #seb self.lasty = self.y = 30
-        wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
-        wx.EVT_SIZE(self, self.OnSize)
-        wx.EVT_PAINT(self, self.OnPaint)
+
+        #20171225-PY2to3 deprecation warning use meth: EvtHandler.Bind -> self.Bind()
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        
+        #wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
+        #wx.EVT_SIZE(self, self.OnSize)
+        #wx.EVT_PAINT(self, self.OnPaint)
         #          EVT_LEFT_DOWN(self, self.OnMouseDown)  # needs fixing...
         #          EVT_LEFT_UP(self, self.OnMouseUp)
         #          EVT_MOTION(self, self.OnMouseMotion)
@@ -137,7 +147,7 @@ class MyCanvasBase(glcanvas.GLCanvas):
         pass # Do nothing, to avoid flashing on MSW.
 
     def OnSize(self, event):
-        self.m_w, self.m_h = self.GetClientSizeTuple()
+        self.m_w, self.m_h = self.GetClientSize()#Tuple()
         if self.m_w <=0 or self.m_h <=0:
             #print "debug: HistogramCanvas.OnSize: self.m_w <=0 or self.m_h <=0", self.m_w, self.m_h
             return
@@ -146,11 +156,16 @@ class MyCanvasBase(glcanvas.GLCanvas):
         event.Skip()
         
     def OnPaint(self, event):
-        dc = wx.PaintDC(self)
+        try: # 20201122 MacOS BigSur
+            dc = wx.PaintDC(self)
+        except wx._core.wxAssertionError:
+            pass
+        except:
+            return 
         if self.m_w <=0 or self.m_h <=0:
             #THIS IS AFTER wx.PaintDC -- OTHERWISE 100% CPU usage
             return 
-        self.SetCurrent()
+        self.SetCurrent(self.context) # 20141124 Cocoa
         if not self.init:
             self.InitGL()
             self.init = 1
@@ -204,8 +219,12 @@ class HistogramCanvas(MyCanvasBase):
         self.dragLeft   = True # in case mouseIsDown happens without preceeding mouseDown
         self.keepZoomedToBraces = True # 20080806
 
-        wx.EVT_MOUSE_EVENTS(self, self.OnMouse)
-        wx.EVT_MOUSEWHEEL(self, self.OnWheel)
+        #20171225-PY2to3 deprecation warning use meth: EvtHandler.Bind -> self.Bind()
+        self.Bind(wx.EVT_MOUSE_EVENTS,  self.OnMouse)
+        self.Bind(wx.EVT_MOUSEWHEEL,    self.OnWheel)
+        
+        #wx.EVT_MOUSE_EVENTS(self, self.OnMouse)
+        #wx.EVT_MOUSEWHEEL(self, self.OnWheel)
         #wx.EVT_CLOSE(self, self.OnClose)
         self.MakePopupMenu()
         self.m_histPlotArray = None
@@ -221,7 +240,6 @@ class HistogramCanvas(MyCanvasBase):
         #20080707 doOnXXXX event handler are now lists of functions
         self.doOnBrace = [] # (self) # use self.leftBrace, self.rightBrace to get current brace positions
         self.doOnMouse = [] # (xEff, ev)
-        
 
     def OnSize(self, event):
         MyCanvasBase.OnSize(self, event)
@@ -232,7 +250,7 @@ class HistogramCanvas(MyCanvasBase):
 
 
     def InitGL(self):
-        (self.m_w, self.m_h) = self.GetClientSizeTuple()
+        (self.m_w, self.m_h) = self.GetClientSize()#Tuple()
         GL.glMatrixMode(GL.GL_PROJECTION)
         GL.glLoadIdentity()
         GL.glOrtho(  0, self.m_w, 0, self.m_h, -1,1)
@@ -281,14 +299,17 @@ class HistogramCanvas(MyCanvasBase):
 
         if self.m_histScaleChanged:
             if self.colMap is not None:
-                GL.glPixelTransferi(GL.GL_MAP_COLOR, True);
-#                 mapsize = len(self.colMap[0])
-#                 GL.glPixelMapfv(GL.GL_PIXEL_MAP_R_TO_R, mapsize, self.colMap[0] )
-#                 GL.glPixelMapfv(GL.GL_PIXEL_MAP_G_TO_G, mapsize, self.colMap[1] )
-#                 GL.glPixelMapfv(GL.GL_PIXEL_MAP_B_TO_B, mapsize, self.colMap[2] )
+                GL.glPixelTransferi(GL.GL_MAP_COLOR, True)
+                # this part may be different depending on GL versions
+                # here is __version__ = 3.0.2 on mac 10.7 py2.6
+                mapsize = len(self.colMap[0])
+                GL.glPixelMapfv(GL.GL_PIXEL_MAP_R_TO_R, mapsize, self.colMap[0] )
+                GL.glPixelMapfv(GL.GL_PIXEL_MAP_G_TO_G, mapsize, self.colMap[1] )
+                GL.glPixelMapfv(GL.GL_PIXEL_MAP_B_TO_B, mapsize, self.colMap[2] )
+                original="""
                 GL.glPixelMapfv(GL.GL_PIXEL_MAP_R_TO_R, self.colMap[0] )
                 GL.glPixelMapfv(GL.GL_PIXEL_MAP_G_TO_G, self.colMap[1] )
-                GL.glPixelMapfv(GL.GL_PIXEL_MAP_B_TO_B, self.colMap[2] )
+                GL.glPixelMapfv(GL.GL_PIXEL_MAP_B_TO_B, self.colMap[2] )"""
             else:
                 GL.glPixelTransferi(GL.GL_MAP_COLOR, False);
 
@@ -318,8 +339,8 @@ class HistogramCanvas(MyCanvasBase):
             GL.glTexCoord2f( 1, 0);          GL.glVertex2f  ( self.rightBrace, HEIGHT*.1)
             GL.glEnd()
         except:
-            print 'DEBUG: histogram.py: oops - set self.bandTobeGenerated'
-            print 'DEBUG: self.m_texture_list', self.m_texture_list
+            print('DEBUG: histogram.py: oops - set self.bandTobeGenerated')
+            print('DEBUG: self.m_texture_list', self.m_texture_list)
             self.bandTobeGenerated  = True
 
         GL.glDisable(GL.GL_TEXTURE_1D);
@@ -360,7 +381,6 @@ class HistogramCanvas(MyCanvasBase):
         
         self.SwapBuffers()
 
-
     def OnWheel(self, evt):
         # print "DEBUG: OnWheel"
         #delta = evt.GetWheelDelta()
@@ -372,7 +392,8 @@ class HistogramCanvas(MyCanvasBase):
         #sfac = 1.05 ** (rot*zoomSpeed)
         sfac = 1.5 ** (rot*zoomSpeed)
         self.m_tx *= sfac
-        x = evt.m_x
+        #x = evt.m_x
+        x = evt.GetPosition()[0]
         self.m_tx += x* (1.-sfac)
         self.m_sx *= sfac
 
@@ -382,7 +403,9 @@ class HistogramCanvas(MyCanvasBase):
         self.fitY() #20080731 
 
     def OnMouse(self, ev):
-        x,y = ev.m_x, self.m_h-ev.m_y
+        #x,y = ev.m_x, self.m_h-ev.m_y
+        x, y = ev.GetPosition()
+        y = self.m_h - y
         xEff = (x - self.m_tx) / float(self.m_sx)
         
         #  global evt
@@ -471,9 +494,9 @@ class HistogramCanvas(MyCanvasBase):
                     if PriConfig.raiseEventHandlerExceptions:
                         raise
                     else:
-                        print >>sys.stderr, " *** error in doOnBrace **"
+                        print(" *** error in doOnBrace **", file=sys.stderr)
                         traceback.print_exc()
-                        print >>sys.stderr, " *** error in doOnBrace **"
+                        print(" *** error in doOnBrace **", file=sys.stderr)
                     
             self.Refresh(0)
 
@@ -492,7 +515,7 @@ class HistogramCanvas(MyCanvasBase):
             self.Refresh(0)
         """
         if ev.LeftDClick():
-            print "x,y: %d %d    xEff: %.3f" %(x,y, xEff)
+            print("x,y: %d %d    xEff: %.3f" %(x,y, xEff))
         for f in self.doOnMouse:
             try:
                 f(xEff, ev) # , 0) #bin)
@@ -500,9 +523,9 @@ class HistogramCanvas(MyCanvasBase):
                 if PriConfig.raiseEventHandlerExceptions:
                     raise
                 else:
-                    print >>sys.stderr, " *** error in doOnMouse **"
+                    print(" *** error in doOnMouse **", file=sys.stderr)
                     traceback.print_exc()
-                    print >>sys.stderr, " *** error in doOnMouse **"
+                    print(" *** error in doOnMouse **", file=sys.stderr)
 
     #20080707 def doOnMouse(self, xEff, bin):
     #20080707    pass
@@ -518,12 +541,21 @@ class HistogramCanvas(MyCanvasBase):
         menu.Append(Menu_Log, "log")
         menu.Append(Menu_FitYToSeen, "auto fit y axis to shown values")
         menu.Append(Menu_EnterScale, "scale to ...")
-        wx.EVT_MENU(self, Menu_Reset, self.OnReset)
-        wx.EVT_MENU(self, Menu_ZoomToBraces, self.zoomToBraces)
-        wx.EVT_MENU(self, Menu_AutoFit, self.autoFit)
-        wx.EVT_MENU(self, Menu_Log, self.OnLog)
-        wx.EVT_MENU(self, Menu_FitYToSeen, self.OnFitYToSeen)
-        wx.EVT_MENU(self, Menu_EnterScale, self.OnEnterScale)
+
+        #20171225-PY2to3 deprecation warning use meth: EvtHandler.Bind -> self.Bind()
+        self.Bind(wx.EVT_MENU, self.OnReset, id=Menu_Reset)
+        self.Bind(wx.EVT_MENU, self.zoomToBraces, id=Menu_ZoomToBraces)
+        self.Bind(wx.EVT_MENU, self.autoFit,      id=Menu_AutoFit)
+        self.Bind(wx.EVT_MENU, self.OnLog,        id=Menu_Log)
+        self.Bind(wx.EVT_MENU, self.OnFitYToSeen, id=Menu_FitYToSeen)
+        self.Bind(wx.EVT_MENU, self.OnEnterScale, id=Menu_EnterScale)
+        
+        #wx.EVT_MENU(self, Menu_Reset, self.OnReset)
+        #wx.EVT_MENU(self, Menu_ZoomToBraces, self.zoomToBraces)
+        #wx.EVT_MENU(self, Menu_AutoFit, self.autoFit)
+        #wx.EVT_MENU(self, Menu_Log, self.OnLog)
+        #wx.EVT_MENU(self, Menu_FitYToSeen, self.OnFitYToSeen)
+        #wx.EVT_MENU(self, Menu_EnterScale, self.OnEnterScale)
         #20051117  wx.EVT_MENU(self, Menu_Gamma, self.OnMenuGamma)
         self.menu = menu
 
@@ -558,7 +590,10 @@ class HistogramCanvas(MyCanvasBase):
             gamma = None
         self.setBraces(float(f[0]), float(f[1])) #20060823 , gamma)
         if gamma and hasattr(self, "my_viewer"):
-            self.my_viewer.cmgray(gamma)
+            self.my_viewer.gamma = gamma
+            self.my_viewer.setGamma()
+            self.my_viewer.changeHistogramScaling()
+            self.my_viewer.updateHistColMap()
             
     def OnLog(self,ev=77777):
         if self.m_log:
@@ -575,12 +610,12 @@ class HistogramCanvas(MyCanvasBase):
 
     def setHist(self, yArray, xMin, xMax):
         import time
-        x = time.clock()
+        #x = time.clock()
 
         n = yArray.shape[0]
         #glSeb      print "setHist00     ms: %.2f"% ((time.clock()-x)*1000.0)
         if n < 2:
-            raise ValueError, "cannot have Histogram with less than 2 bins"
+            raise ValueError("cannot have Histogram with less than 2 bins")
         if xMin == xMax:
             #WARN:? print " ** setHist: xMin == xMax ==",xMin, "!! set xMax+=1"
             xMax+=1
@@ -604,16 +639,23 @@ class HistogramCanvas(MyCanvasBase):
            self.m_histPlotArray[:,0] = N.linspace(xMin,xMax, n)
         #glSeb      print "setHist2 ms: %.2f"% ((time.clock()-x)*1000.0)
 
-        if not self.GetContext():
+        if 0:#not self.GetContext():
+            testing="""
             print " ** setHist: no self.GetContext():"
-            return
+            return"""
 
         #glSeb      print "setHist3 ms: %.2f"% ((time.clock()-x)*1000.0)
-        self.SetCurrent()
+        #self.SetCurrent()
         #glSeb      print "setHist3b ms: %.2f"% ((time.clock()-x)*1000.0)
         #
-        glSeb.glVertexPointer(self.m_histPlotArray)
-        #GL.glVertexPointerf(self.m_histPlotArray)
+        #glSeb.glVertexPointer(self.m_histPlotArray) # AM 20130203
+
+        if Call_Yield_Before_SetCurrent:
+            wx.Yield() # 20191029 this was very harmfull. Y.view does not work on most systems. But this was required for Dileptus particles_in_cells. Set Call_Yield_Before_SetCurrent before calling Y.view.
+
+       	self.SetCurrent(self.context) # 20141124 Cocoa
+        if sys.platform != 'linux':
+            GL.glVertexPointerf(self.m_histPlotArray) # 20201224
         
         #glSeb       print "setHist4 ms: %.2f"% ((time.clock()-x)*1000.0)
 
@@ -623,16 +665,18 @@ class HistogramCanvas(MyCanvasBase):
     def goLog(self):
         self.m_log = True
         self.m_histPlotArray[:,1] = N.log(self.m_histPlotArray[:,1]+HistLogModeZeroOffset)
-        self.SetCurrent()
-        glSeb.glVertexPointer(self.m_histPlotArray)
+        self.SetCurrent(self.context) # 20141124
+        #glSeb.glVertexPointer(self.m_histPlotArray) # AM 20130203
+        GL.glVertexPointerf(self.m_histPlotArray)
         self.fitY()
         #self.Refresh(0)
         
     def goLinear(self):
         self.m_log = False
         self.m_histPlotArray[:,1] = N.exp(self.m_histPlotArray[:,1])-HistLogModeZeroOffset
-        self.SetCurrent()
-        glSeb.glVertexPointer(self.m_histPlotArray)
+        self.SetCurrent(self.context) # 20141124 cocoa
+        #glSeb.glVertexPointer(self.m_histPlotArray) # AM 20130203
+        GL.glVertexPointerf(self.m_histPlotArray)
         self.fitY()
         # self.Refresh(0)
 
@@ -645,8 +689,8 @@ class HistogramCanvas(MyCanvasBase):
         ys = self.m_histPlotArray[:,1]
         if self.fitYtoSeen:
             xs = self.m_histPlotArray[:,0]
-            mi = -self.m_tx / self.m_sx
-            ma = mi + self.m_w / self.m_sx
+            mi = -self.m_tx / float(self.m_sx)
+            ma = mi + self.m_w / float(self.m_sx)
             shownIdxs = N.where((xs>=mi) & (xs<=ma))[0]
             if len(shownIdxs) == 0:
                 return
@@ -673,7 +717,7 @@ class HistogramCanvas(MyCanvasBase):
         if den == 0 or self.m_w <= 0:
             self.m_sx = 1
         else:
-            self.m_sx = self.m_w / den
+            self.m_sx = self.m_w / float(den)
         self.m_tx = - self.leftBrace * self.m_sx
         # self.m_sy =
         self.zoomChanged = 1
@@ -681,6 +725,7 @@ class HistogramCanvas(MyCanvasBase):
 
     def autoFit(self, ev=None, amin=None, amax=None, autoscale=True):
         # self.setBraces(   )
+        
         whereHelper = None
         if amin is None:
             #20080730 amin = float( self.m_histPlotArray[0,0] ) # pyOpenGL cannot handle numpy.float32
@@ -689,7 +734,15 @@ class HistogramCanvas(MyCanvasBase):
             else:
                 whereHelper = N.where(self.m_histPlotArray[:,1]>0)[0]
 
-            amin = self.m_histPlotArray[ whereHelper[0],  0]
+            if whereHelper is not None and len(whereHelper):
+                amin = self.m_histPlotArray[ whereHelper[0],  0]
+            elif hasattr(self, 'hist_min'): # setupHistArr in splitND
+                amin = self.hist_min
+                amax = self.hist_max
+                #print self.hist_min
+            else:
+                amin = float( self.m_histPlotArray[0,0] ) # pyOpenGL cannot handle numpy.float32
+                #amin = self.m_histPlotArray[ whereHelper[0],  0]"""
         if amax is None:
             #20080730 amax = float( self.m_histPlotArray[-1,0] ) # pyOpenGL cannot handle numpy.float32
             if whereHelper is None:
@@ -698,7 +751,10 @@ class HistogramCanvas(MyCanvasBase):
                 else:
                     whereHelper = N.where(self.m_histPlotArray[:,1]>0)[0]
 
-            amax = self.m_histPlotArray[ whereHelper[-1],  0]
+            if whereHelper is not None and len(whereHelper):
+                amax = self.m_histPlotArray[ whereHelper[-1],  0]
+            else:
+                amax = float( self.m_histPlotArray[-1,0] ) # pyOpenGL cannot handle numpy.float32
         self.leftBrace =  float(amin)  # fix numpy types like uint16 coming from a.min()
         self.rightBrace=  float(amax)
         #self.Refresh(0)
@@ -713,9 +769,9 @@ class HistogramCanvas(MyCanvasBase):
                 if PriConfig.raiseEventHandlerExceptions:
                     raise
                 else:
-                    print >>sys.stderr, " *** error in doOnBrace **"
+                    print(" *** error in doOnBrace **", file=sys.stderr)
                     traceback.print_exc()
-                    print >>sys.stderr, " *** error in doOnBrace **"
+                    print(" *** error in doOnBrace **", file=sys.stderr)
 
 
     def setBraces(self, l,r): #20060823 , gamma=None):
@@ -728,9 +784,9 @@ class HistogramCanvas(MyCanvasBase):
                 if PriConfig.raiseEventHandlerExceptions:
                     raise
                 else:
-                    print >>sys.stderr, " *** error in doOnBrace **"
+                    print(" *** error in doOnBrace **", file=sys.stderr)
                     traceback.print_exc()
-                    print >>sys.stderr, " *** error in doOnBrace **"
+                    print(" *** error in doOnBrace **", file=sys.stderr)
 
         #20080707 self.doOnBrace(self.leftBrace, self.rightBrace) #20060823, gamma)
         self.Refresh(0)

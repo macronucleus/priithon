@@ -3,7 +3,7 @@ provides the bitmap OpenGL panel for Priithon's ND 2d-section-viewer
 
 common base class for single-color and multi-color version
 """
-from __future__ import absolute_import
+from __future__ import print_function
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -19,8 +19,7 @@ __license__ = "BSD license - see LICENSE file"
 
 
 
-
-
+import six
 import wx
 from wx import glcanvas as wxgl
 #from wxPython import glcanvas
@@ -28,7 +27,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 import numpy as N
-import traceback
+import traceback, sys
 from . import PriConfig
 
 bugXiGraphics = 0
@@ -37,7 +36,6 @@ Menu_Zoom2x      = wx.NewId()
 Menu_ZoomCenter  = wx.NewId()
 Menu_Zoom_5x     = wx.NewId()
 Menu_ZoomReset   = wx.NewId()
-Menu_Zoom1       = wx.NewId()
 Menu_ZoomOut     = wx.NewId()
 Menu_ZoomIn      = wx.NewId()
 Menu_Color       = wx.NewId()
@@ -51,12 +49,12 @@ Menu_noGfx = wx.NewId()
 Menu_aspectRatio = wx.NewId()
 Menu_rotate = wx.NewId()
 Menu_grid        = wx.NewId()
-Menu_ColMap = [wx.NewId() for i in range(8)]
+Menu_ColMap = [wx.NewId() for i in range(9)]
 
 
 class GLViewerCommon(wxgl.GLCanvas):
-    def __init__(self, parent, size=wx.DefaultSize, originLeftBottom=None):
-        wxgl.GLCanvas.__init__(self, parent, -1, size=size, style=wx.WANTS_CHARS)
+    def __init__(self, parent, size=wx.DefaultSize, originLeftBottom=None):#, depth=32):
+        wxgl.GLCanvas.__init__(self, parent, -1, size=size, style=wx.WANTS_CHARS)#, attribList=[wxgl.WX_GL_DOUBLEBUFFER, wxgl.WX_GL_RGBA, wxgl.WX_GL_DEPTH_SIZE, depth])
         # wxWANTS_CHARS to get arrow keys on Windows
 
         self.error = None
@@ -78,6 +76,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         self.m_pixelGrid_state = 0 # 0-off, 1-everyPixel, 2- every 10 pixels
 
         self.m_init   = False
+        self.context = wxgl.GLContext(self) # 20141124 cocoa
 
         self.m_moreGlLists = []
         self.m_moreGlLists_enabled = []
@@ -105,12 +104,17 @@ class GLViewerCommon(wxgl.GLCanvas):
         self.doOnLDown       = [] # (x,y, ev)
         
 
-        wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
-        #20080707-unused wx.EVT_MOVE(parent, self.OnMove) # CHECK
-        wx.EVT_SIZE(self, self.OnSize)
-        wx.EVT_MOUSEWHEEL(self, self.OnWheel)
-        wx.EVT_MOUSE_EVENTS(self, self.OnMouse)
-        #self.Bind(wx.EVT_SIZE, self.OnSize)
+        #wx.EVT_ERASE_BACKGROUND(self, self.OnEraseBackground)
+
+        #20171225-PY2to3 deprecation warning use meth: EvtHandler.Bind -> self.Bind()
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+        #wx.EVT_SIZE(self, self.OnSize)
+        #evtHandler.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.OnWheel)
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
+        #wx.EVT_MOUSEWHEEL(self, self.OnWheel)
+        #wx.EVT_MOUSE_EVENTS(self, self.OnMouse)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
 
 
     def setPixelGrid(self, ev=None):
@@ -129,7 +133,7 @@ class GLViewerCommon(wxgl.GLCanvas):
     def drawPixelGrid(self, spacingY, spacingX, color=(1,0,0), width=1):
         self.newGLListNow(idx='m_pixelGrid_Idx')
         glLineWidth(width)
-        glColor(*color)
+        glColor3f(*color)
         glTranslate(-.5,-.5 ,0)  # 20080701:  in new coord system, integer pixel coord go through the center of pixel
 
         glBegin(GL_LINES)
@@ -137,10 +141,10 @@ class GLViewerCommon(wxgl.GLCanvas):
         nx = self.pic_nx
         if self.m_originLeftBottom == 8:
             nx = (nx-1)*2
-        for y in N.arange(0,ny+spacingY/2., spacingY):
+        for y in range(0,ny+1, spacingY):
             glVertex2d(0, y)
             glVertex2d(nx, y)
-        for x in N.arange(0,nx+spacingX/2., spacingX):
+        for x in range(0,nx+1, spacingX):
             glVertex2d(x, 0)
             glVertex2d(x, ny)
         glEnd()
@@ -169,8 +173,8 @@ class GLViewerCommon(wxgl.GLCanvas):
         if idx is of type str: on first use, same as None; but on subsequent uses, reuse and overwrite 
         """
         self.m_moreGlListReuseIdx = idx
-        self.SetCurrent()
-        if isinstance(idx, basestring):
+        self.SetCurrent(self.context)
+        if isinstance(idx, six.string_types):
             idx = self.m_moreGlLists_NamedIdx.get(idx) # Never raises an exception if k is not in the map, instead it returns x. x is optional; when x is not provided and k is not in the map, None is returned. 
             if idx is None:
                 self.curGLLIST = glGenLists( 1 )
@@ -195,7 +199,7 @@ class GLViewerCommon(wxgl.GLCanvas):
     def newGLListAbort(self):
         glEndList()
         glDeleteLists(self.curGLLIST, 1)
-        if isinstance(self.m_moreGlListReuseIdx, basestring):
+        if isinstance(self.m_moreGlListReuseIdx, six.string_types):
             try:
                 del self.m_moreGlLists_NamedIdx[self.m_moreGlListReuseIdx] # CHECK
             except KeyError:
@@ -204,7 +208,7 @@ class GLViewerCommon(wxgl.GLCanvas):
 
     def newGLListDone(self, enable=True, refreshNow=True):
         glEndList()
-        if isinstance(self.m_moreGlListReuseIdx, basestring):
+        if isinstance(self.m_moreGlListReuseIdx, six.string_types):
             idx = self.m_moreGlLists_NamedIdx.get(self.m_moreGlListReuseIdx)
         else:
             idx = self.m_moreGlListReuseIdx
@@ -220,7 +224,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         self.newGLListNameAdd(idx, self.curGLLISTname)
 
         # remember named idx for future re-use
-        if isinstance(self.m_moreGlListReuseIdx, basestring):
+        if isinstance(self.m_moreGlListReuseIdx, six.string_types):
             self.m_moreGlLists_NamedIdx[self.m_moreGlListReuseIdx] = idx
         self.m_moreGlListReuseIdx = None
 
@@ -280,7 +284,7 @@ class GLViewerCommon(wxgl.GLCanvas):
 #           glDeleteTextures( self.m_moreGlLists_texture[idx] )
 #           del self.m_moreGlLists_img[idx]
 
-        if isinstance(idx, basestring):
+        if isinstance(idx, six.string_types):
             idx=self.m_moreGlLists_NamedIdx[idx]
         elif idx<0:
             idx += len(self.m_moreGlLists)
@@ -300,7 +304,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         #remove idx from 'name' dict entry
         #   remove respective dict-name if it gets empty
         _postposeDelList = [] # to prevent this error:dictionary changed size during iteration
-        for name,idxList in self.m_moreGlLists_dict.iteritems():
+        for name,idxList in self.m_moreGlLists_dict.items():
             try:
                 idxList.remove(idx)
                 if not len(idxList):
@@ -317,7 +321,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         """
         ignore moreGlList items that are None !
         """
-        if isinstance(idx, basestring):
+        if isinstance(idx, six.string_types):
             idx=self.m_moreGlLists_NamedIdx[idx]
         if self.m_moreGlLists_enabled[idx] is not None:
             self.m_moreGlLists_enabled[idx] = on
@@ -347,8 +351,8 @@ class GLViewerCommon(wxgl.GLCanvas):
         del self.m_moreGlLists_dict[name]
 
         # clean up other name entries in dict
-        for name,idxList in self.m_moreGlLists_dict.items():
-            for i in xrange(len(idxList)-1,-1,-1):
+        for name,idxList in list(self.m_moreGlLists_dict.items()):
+            for i in range(len(idxList)-1,-1,-1):
                 if self.m_moreGlLists[idxList[i]] is None:
                     del idxList[i]
             if not len(idxList):
@@ -356,7 +360,7 @@ class GLViewerCommon(wxgl.GLCanvas):
 
 
         #20090505: remove trailing None's
-        for idx in xrange(len(self.m_moreGlLists)-1, -1, -1):
+        for idx in range(len(self.m_moreGlLists)-1, -1, -1):
             if self.m_moreGlLists[idx] is None:
                 del self.m_moreGlLists[idx]
                 del self.m_moreGlLists_enabled[idx]
@@ -403,7 +407,7 @@ class GLViewerCommon(wxgl.GLCanvas):
     def OnChgNoGfx(self):
         self.m_moreMaster_enabled ^= 1
         menuid  = self.m_menu.FindItem("hide all gfx")
-        self.m_menu.FindItemById(menuid).Check(not self.m_moreMaster_enabled)
+        self.m_menu.FindItemById(menuid).Check(self.m_moreMaster_enabled)
         self.Refresh(0)
 
     def setAspectRatio(self, y_over_x, refreshNow=1):
@@ -513,31 +517,21 @@ class GLViewerCommon(wxgl.GLCanvas):
         n= self.pic_nx / 4
         if self.m_originLeftBottom == 8:
             n= (n-1) * 2
-        self.doShift(int(- self.m_scale*n) , 0)
+        self.doShift(- self.m_scale*n , 0)
     def quaterShiftOffsetRight(self):
         n= self.pic_nx / 4
         if self.m_originLeftBottom == 8:
             n= (n-1) * 2
-        self.doShift(int(+ self.m_scale*n) , 0)
+        self.doShift(+ self.m_scale*n , 0)
     def quaterShiftOffsetUp(self):
         n= self.pic_ny / 4
-        self.doShift(0,  int(+ self.m_scale*self.m_aspectRatio*n))
+        self.doShift(0,  + self.m_scale*n)
     def quaterShiftOffsetDown(self):
         n= self.pic_ny / 4
-        self.doShift(0,  int(- self.m_scale*self.m_aspectRatio*n))
+        self.doShift(0,  - self.m_scale*n)
 
-    def doShift(self, dx,dy, ):
-        """
-        shift view offset by dx,dy pixels
-        if dx or dy is a float, it is multiplied by the viewer's width of height respectively
-        keepCentered is set to False
-        """
+    def doShift(self, dx,dy):
         self.keepCentered = False
-
-        if isinstance(dx, float):
-            dx = int(dx * self.m_w)
-        if isinstance(dy, float):
-            dy = int(dy * self.m_h)
 
         self.m_x0 += dx
         self.m_y0 += dy
@@ -550,9 +544,15 @@ class GLViewerCommon(wxgl.GLCanvas):
         if self.m_x0 is None:
             return # before first OnPaint call
 
-        self.SetCurrent()        
-        x,y = ev.m_x,  self.m_h-ev.m_y
-        xEff_float, yEff_float= gluUnProject(x,y,0)[:2]
+        self.SetCurrent(self.context)        
+        #x,y = ev.m_x,  self.m_h-ev.m_y
+       # x, y = ev.GetPosition() # 20141127
+       # y = self.m_h - y
+        #xEff_float, yEff_float= gluUnProject(x,y,0)[:2] # does not work on M2 Mac 20230225
+        x = ev.GetX()
+        y = self.m_h-ev.GetY()
+        x0, y0, scale, aspR = self.m_x0, self.m_y0, self.m_scale, self.m_aspectRatio
+        xEff_float, yEff_float = int( (x-x0)/scale ) , int( (y-y0)/(scale*aspR) ) 
 
         # 20080701:  in new coord system, integer pixel coord go through the center of pixel
 
@@ -591,7 +591,6 @@ class GLViewerCommon(wxgl.GLCanvas):
         #20070713     return
 
         if midButt:
-            #20100125 print "# debug: save self.mouse_last_x, self.mouse_last_y", x,y
             self.mouse_last_x, self.mouse_last_y = x,y
         elif midIsButt: #ev.Dragging()
             self.keepCentered = False
@@ -611,7 +610,6 @@ class GLViewerCommon(wxgl.GLCanvas):
                 self.m_x0 += (x-self.mouse_last_x) #/ self.sx
                 self.m_y0 += (y-self.mouse_last_y) #/ self.sy
             self.m_zoomChanged = 1
-            #20100125 print "# debug:222222self.mouse_last_x, self.mouse_last_y", self.mouse_last_x, self.mouse_last_y, x,y
             self.mouse_last_x, self.mouse_last_y = x,y
             self.Refresh(0)
 
@@ -627,9 +625,9 @@ class GLViewerCommon(wxgl.GLCanvas):
                     if PriConfig.raiseEventHandlerExceptions:
                         raise
                     else:
-                        print >>sys.stderr, " *** error in doOnLDown **"
+                        print(" *** error in doOnLDown **", file=sys.stderr)
                         traceback.print_exc()
-                        print >>sys.stderr, " *** error in doOnLDown **"
+                        print(" *** error in doOnLDown **", file=sys.stderr)
                     
         elif ev.LeftDClick():
             for f in self.doOnLDClick:
@@ -639,9 +637,9 @@ class GLViewerCommon(wxgl.GLCanvas):
                     if PriConfig.raiseEventHandlerExceptions:
                         raise
                     else:
-                            print >>sys.stderr, " *** error in doOnLDClick **"
+                            print(" *** error in doOnLDClick **", file=sys.stderr)
                             traceback.print_exc()
-                            print >>sys.stderr, " *** error in doOnLDClick **"
+                            print(" *** error in doOnLDClick **", file=sys.stderr)
                     
             #print ":", x,y, "   ", x0,y0, s, "   ", xyEffInside, " : ", xEff, yEff
             
@@ -657,9 +655,9 @@ class GLViewerCommon(wxgl.GLCanvas):
                 if PriConfig.raiseEventHandlerExceptions:
                     raise
                 else:
-                    print >>sys.stderr, " *** error in doOnMouse **"
+                    print(" *** error in doOnMouse **", file=sys.stderr)
                     traceback.print_exc()
-                    print >>sys.stderr, " *** error in doOnMouse **"
+                    print(" *** error in doOnMouse **", file=sys.stderr)
         ev.Skip() # other things like EVT_MOUSEWHEEL are lost
 
 
@@ -673,7 +671,7 @@ class GLViewerCommon(wxgl.GLCanvas):
     #20080707-unused     event.Skip()
 
     def OnSize(self, event):
-        self.m_w, self.m_h = self.GetSizeTuple() # self.GetClientSizeTuple()
+        self.m_w, self.m_h = self.GetSize() #Tuple() # self.GetClientSizeTuple()
         if self.m_w <=0 or self.m_h <=0:
             #print "GLViewer.OnSize self.m_w <=0 or self.m_h <=0", self.m_w, self.m_h
             return
@@ -738,16 +736,16 @@ class GLViewerCommon(wxgl.GLCanvas):
 
     def OnSaveScreenShort(self, event=None):
         """always flipY"""
-        from .all import U, FN, Y
-        fn = FN(1, verbose=0)
+        from Priithon.all import U, FN, Y
+        fn = FN(1)#, verbose=0)
         if not fn:
             return
 
         flipY=1
         if flipY:
-            U.saveImg(self.readGLviewport(copy=1)[:, ::-1], fn)
+            U.saveImg(self.readGLviewport(clip=1, copy=1)[:, ::-1], fn)
         else:
-            U.saveImg(self.readGLviewport(copy=1), fn)
+            U.saveImg(self.readGLviewport(clip=1, copy=1), fn)
         
         Y.shellMessage("### screenshot saved to '%s'\n"%fn)
 
@@ -764,11 +762,15 @@ class GLViewerCommon(wxgl.GLCanvas):
             except:
                 pass
 
-        Y.assignNdArrToVarname(self.m_imgArr, ss)
+        if hasattr(self, 'm_imgArr'):
+            arr = self.m_imgArr
+        elif hasattr(self, 'm_imgList'):
+            arr = N.array([img[2] for img in self.m_imgList])
+        Y.assignNdArrToVarname(arr, ss) #self.m_imgArr, ss)
 
     def OnSave(self, event=None):
-        from .all import Mrc, U, Y
-        fn = Y.FN(1, verbose=0)
+        from Priithon.all import Mrc, U, Y
+        fn = Y.FN(1)#, verbose=0)
         if not fn:
             return
         if fn[-4:] in [ ".mrc",  ".dat" ]:
@@ -861,7 +863,13 @@ set image aspect ratio (y/x factor for display)
             if copy == 0 returns non-contiguous array!!!
 
         """
-        self.SetCurrent()
+        import sys, platform
+        
+        self.m_zoomChanged = True
+        self.Refresh(0)
+        wx.YieldIfNeeded()
+        
+        self.SetCurrent(self.context)
         glPixelStorei(GL_PACK_ALIGNMENT, 1)
         
         get_cm = glGetInteger(GL_MAP_COLOR)
@@ -883,27 +891,41 @@ set image aspect ratio (y/x factor for display)
         glPixelTransferf(GL_GREEN_BIAS, 0)
         glPixelTransferf(GL_BLUE_BIAS,  0)
 
-        b=glReadPixels(0,0, self.m_w, self.m_h,
-                       GL_RGB,GL_UNSIGNED_BYTE)
+        # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
+        # https://discuss.wxpython.org/t/buttons-on-top-of-glcanvas/34540/6
+        ver = wx.version()
+        major, minor = ver.split('.')[:2]
+        if int(major) >= 4 and int(minor) >= 1:#sys.platform == 'darwin' and platform.processor() == 'arm':
+            cs = self.GetContentScaleFactor()
+        else:
+            cs = 1
+
+        size = self.GetClientSize()
+        width = int(size.width * cs + .5)# * self.GetContentScaleFactor()+.5)
+        height = int(size.height * cs + .5)# * self.GetContentScaleFactor()+.5)
+        b = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
         
-        bb=N.ndarray(buffer=b, shape=(self.m_h,self.m_w,3),
+        bb=N.ndarray(buffer=b, shape=(height,width,3),
                    dtype=N.uint8) #, aligned=1)
 
         cc = N.transpose(bb, (2,0,1))
 
         if clip:
-            x0,y0, s,a = int(self.m_x0), int(self.m_y0),self.m_scale,self.m_aspectRatio
+            # 20240528 added self.GetContentScaleFactor() which is 2 for newer mac
+            #cs = 1#self.GetContentScaleFactor()
+            #x0,y0, s,a = int(self.m_x0), int(self.m_y0),self.m_scale,self.m_aspectRatio
+            x0,y0, s,a = int(self.m_x0*cs+.5), int(self.m_y0*cs+.5),self.m_scale,self.m_aspectRatio
             if hasattr(self, "m_imgArr"):
                 ny,nx = self.m_imgArr.shape
             else:
                 ny,nx = self.m_imgList[0][2].shape
-            nx,ny = int(nx*s +.5), int(ny*s*a + .5)
+            nx,ny = int(nx*cs*s +.5), int(ny*cs*s*a + .5)
             x1,y1 = x0+ nx, y0+ny
 
-            x0 = N.clip(x0, 0, self.m_w)
-            x1 = N.clip(x1, 0, self.m_w)
-            y0 = N.clip(y0, 0, self.m_h)
-            y1 = N.clip(y1, 0, self.m_h)
+            x0 = N.clip(x0, 0, int(self.m_w*cs+.5))
+            x1 = N.clip(x1, 0, int(self.m_w*cs+.5))
+            y0 = N.clip(y0, 0, int(self.m_h*cs+.5))
+            y1 = N.clip(y1, 0, int(self.m_h*cs+.5))
             nx,ny = x1-x0, y1-y0
             cc=cc[:,y0:y1,x0:x1]
         #else:

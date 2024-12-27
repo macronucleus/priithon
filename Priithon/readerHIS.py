@@ -1,16 +1,11 @@
 """
-Priithon: Hamamatsu Image Sequence file format reader
+Hamamatsu Image Sequence file format reader
+
 """
-from __future__ import absolute_import
-
-__author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
-__license__ = "BSD license - see LICENSE file"
-
 import numpy as N
 
 mmap_shape = None # default: map entire file; change this to handle BIG files
 
-# 64 bytes
 dtypeHIS = N.dtype([
     ('magic', 'a2'),
     ('ComLen', N.uint16),
@@ -35,59 +30,9 @@ hisType2numpyDtype = {
     12: ('RGB', (N.uint16,N.uint16,N.uint16)),
 }
 
-#20100224 class ndarray_inHisFile(N.ndarray):
-#20100224     def __array_finalize__(self,obj):
-#20100224         self.HIS = getattr(obj, 'HIS', None)
-
-#http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
-# Simple example - adding an extra attribute to ndarray
 class ndarray_inHisFile(N.ndarray):
-    def __new__(cls, input_array, hisInfo=None):
-        obj = N.asarray(input_array).view(cls)
-        obj.HIS = hisInfo
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
+    def __array_finalize__(self,obj):
         self.HIS = getattr(obj, 'HIS', None)
-
-def _try_openHIS_fastMap(m):
-    hisHdr0 = m[:64]
-    hisHdr0.dtype = dtypeHIS
-    try:
-        hisHdr0 = hisHdr0[0]
-    except IndexError:
-        raise EOFError, "zero Bytes HIS file"
-
-    imgPixDType = hisType2numpyDtype[ hisHdr0['pixType'] ]
-    pixBytes = imgPixDType().itemsize
-    nx,ny,nz = hisHdr0['iDX'],  hisHdr0['iDY'],  hisHdr0['numImgs']
-    comLen=hisHdr0['ComLen']
-
-    expectedBytes = (64 + pixBytes*nx*ny) * nz + comLen
-    if expectedBytes != len(m):
-        return None # there are probably comments in other sections, fastMap cannot be used
-
-    mm = m[comLen:] # first hdr will be "corrupt", since comment is just before first imgData
-    a = N.recarray(nz, dtype=[( 'hdr',     dtypeHIS ), 
-                              ( 'imgData', (imgPixDType, (ny,nx)) ),
-                              ], 
-                   buf=mm)
-
-    if comLen:
-        hisComment = m[64:64+comLen]
-        hisComment.dtype = '|S%d'%(comLen,)
-    else:
-        hisComment = ('',)
-    comment = hisComment[0]  # there is "one" comment per sect
-
-    class hisInfo:
-        hdr0 = hisHdr0
-        comment0 = comment
-        hdr = a['hdr']
-
-    fastHisArr = ndarray_inHisFile(a['imgData'], hisInfo=hisInfo)
-    return fastHisArr
 
 def openHIS(fn, mode='r'):
     """
@@ -98,23 +43,17 @@ def openHIS(fn, mode='r'):
     """
 
     m = N.memmap(fn, shape=mmap_shape, mode=mode)
-
-    if mmap_shape is None:
-        a = _try_openHIS_fastMap(m)
-        if a is not None:
-            return a
-
     offset=0
     imgs = []
     while 1: # for i in range(10):
         try:
             img = readSection(m, offset)
-        except EOFError:#  EOFError:
+        except:#  EOFError:
             break
         imgs.append(img)
         offset = img.HIS.offsetNext
 
-    from .fftfuncs import mockNDarray
+    from Priithon.fftfuncs import mockNDarray
     return mockNDarray(*imgs)
 
 
@@ -132,7 +71,7 @@ def readSection(m, offsetSect = 0):
     try:
         hisHdr = hisHdr[0]
     except IndexError:
-        raise EOFError, "End of HIS file reached"
+        raise EOFError("End of HIS file reached")
 
 
     assert hisHdr['magic'] == 'IM'
@@ -159,15 +98,13 @@ def readSection(m, offsetSect = 0):
     #hisHdr     = weakref.proxy( hisHdr )
     #hisComment = weakref.proxy( hishisComment )
     
-#20100224     img.__class__ = ndarray_inHisFile
+    img.__class__ = ndarray_inHisFile
     class hisHeaderInfo:
         hdr = hisHdr
         comment = hisComment[0]  # there is "one" comment per sect
         offsetNext = sectEnd
 
-#20100224     img.HIS = hisHeaderInfo
-    img = ndarray_inHisFile(img, hisInfo=hisHeaderInfo)
-
+    img.HIS = hisHeaderInfo
     return img
 
 '''
@@ -283,5 +220,5 @@ def loadHISsects(fn, secStart=0, secEnd=1, stride=1):
         i+=1
     #img.HIS = hisHeaderInfo
 
-    from .fftfuncs import mockNDarray
+    from Priithon.fftfuncs import mockNDarray
     return mockNDarray(*imgs)

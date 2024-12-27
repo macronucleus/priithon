@@ -5,7 +5,6 @@ points are always defined as y,x tuples or numpy arrays
 segments are sequences of pairs-of-nodes
 boxes are a sequence of two diagonal edge-points
 """
-from __future__ import absolute_import
 
 def geoPointsEq(yx0, yx1, eps=1e-2):
     """

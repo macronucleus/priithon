@@ -1,10 +1,3 @@
-"""
-Priithon guiParams.py
-"""
-from __future__ import absolute_import
-
-__author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
-__license__ = "BSD license - see LICENSE file"
 
 class guiParams(object):
     def __init__(self):
@@ -38,21 +31,14 @@ class guiParams(object):
         self.__dict__['_paramsGUI_setAttrSrc'] = None # "short-memory" for 'which GUI triggered' the value change
         #                                      # this is to prevent e.g. TxtCtrl being 'updated' while typing
         self.__dict__['_paramsOnHold'] = {} # these are currently not triggering event handlers being called
-        self.__dict__['_simpleCounterToAutonameButtons'] = 0
 
     def __getattr__(self, n):
         try:
             v = self._paramsVals[n]
         except:
-            raise AttributeError, "parameter `%s` unknown" %(n,)
+            raise AttributeError("parameter `%s` unknown" %(n,))
 
         return v
-
-    def __getitem__(self, n):
-        return self.__getattr__(n)
-
-    def __setitem__(self, n, v):
-        return self.__setattr__(n, v)
 
     def __setattr__(self, n, v):
         """
@@ -96,7 +82,7 @@ class guiParams(object):
 
         triggeringGUI = self.__dict__['_paramsGUI_setAttrSrc']
 
-        if not guis.has_key(n):
+        if n not in guis:
             guis[n] = []
             doOns[n] = []
         else:
@@ -107,8 +93,6 @@ class guiParams(object):
                     #gui.SetValue( str(v) )
                     #20080821 gui.ChangeValue( str(v) )
                     gui.ChangeValue( eval(gui.val2gui+"(v)") )
-                elif isinstance(gui, wx.Button):
-                    pass
                 else:
                     # wx.Slider
                     #20080821 gui.SetValue( int(v) )
@@ -138,7 +122,7 @@ class guiParams(object):
 
     # for PyCrust -- PyShell
     def _getAttributeNames(self):
-        return self.__dict__['_paramsVals'].keys()
+        return list(self.__dict__['_paramsVals'].keys())
         
 
     #def _register(self, n, v): #, filterFnc=int):
@@ -157,7 +141,7 @@ class guiParams(object):
         try:
             l=self.__dict__['_paramsGUIs'][n]
         except KeyError:
-            raise AttributeError, "parameter `%s` unknown" %(n,)            
+            raise AttributeError("parameter `%s` unknown" %(n,))            
             #    l=self.__dict__['_paramsGUIs'][n] = []
 
         if val2gui is not None:
@@ -168,10 +152,8 @@ class guiParams(object):
             gui.val2gui = "int" 
         elif isinstance(gui, (wx.CheckBox, wx.ToggleButton)):
             gui.val2gui = "bool" 
-        elif isinstance(gui, wx.Button):
-            gui.val2gui = None
         else:
-            print "WARNING: GuiParams: what is the type of this gui:", gui
+            print("DEBUG: GuiParams: what is the type of this gui:", gui)
             gui.val2gui = "int" 
             
         #if gui in not None:
@@ -181,7 +163,7 @@ class guiParams(object):
         try:
             l=self.__dict__['_paramsGUIs'][n]
         except KeyError:
-            raise AttributeError, "parameter `%s` unknown" %(n,)            
+            raise AttributeError("parameter `%s` unknown" %(n,))            
         l.remove(gui)
 
 
@@ -194,7 +176,7 @@ class guiParams(object):
            apply / reset hold for all params
         """
         if n is None:
-            for n in self.__dict__['_paramsVals'].iterkeys():
+            for n in self.__dict__['_paramsVals'].keys():
                 self._holdParamEvents(n, hold)
             return
 
@@ -280,44 +262,6 @@ class guiParams(object):
 #             l += ['\n']
 #         return l
 
-    def _bboxButton(self, label, n=None, v=0, regFcn=None, regFcnName=None, weight=1, expand=True,
-                    tooltip=""):
-        """
-        return list of tuple to be used in buttonBox contructors itemList
-        
-        guiParam buttons are counters, incremented by 1 one each click
-
-        label: static text label used in button box (e.g. "pushMe!")
-        n:     guiParms var name (as string!) 
-               -- None means: generate auto-name: 'button1', 'button2', ...
-        v:     inital value
-
-        """
-        if n is None:
-            self.__dict__['_simpleCounterToAutonameButtons'] += 1
-            ccc = self.__dict__['_simpleCounterToAutonameButtons']
-            n = 'button%d'%(ccc,)
-            #self.__dict__['_simpleCounterToAutonameButtons']
-
-        def fcn(execModule, value, buttonObj, evt):
-            #print execModule, value, buttonObj, evt
-            #print '-----------------------'
-
-            #not needed for wxButton: self.__dict__['_paramsGUI_setAttrSrc'] = buttonObj
-            self.__setattr__(n, self.__getattr__(n)+1)
-        self.__setattr__(n,v)
-
-        t = "b _._registerGUI('%s', x)\t%s"%(n, label)
-        l = [ (t, fcn, weight,expand,tooltip) ]
-
-        # register event handlers
-        if regFcn is not None:
-            from .usefulX import _registerEventHandler
-            _registerEventHandler(self.__dict__['_paramsDoOnValChg'][n], 
-                                  newFcn=regFcn, newFcnName=regFcnName) #, oldFcnName='', delAll=False)
-
-        return l
-
     def _bboxInt(self, label, n, v=0, 
                  slider=True, slmin=0, slmax=100, newLine=True,
                  val2txt="str",
@@ -353,7 +297,7 @@ class guiParams(object):
         return self._bboxItemsGroup(label, n, v, 
                                     txt2val=float, val2txt=val2txt,
                                     slider=(slmin,slmax)  if slider else None, 
-                                    sl2val=(lambda x:x/10**slDecimals), 
+                                    sl2val=(lambda x:x/10.**slDecimals), 
                                     val2sl='(lambda x:x*%f)'%(10**slDecimals,), 
                                     arrowKeyStep=.1**slDecimals,
                                     newLine=newLine,
@@ -396,6 +340,9 @@ class guiParams(object):
              its value is used as "expand" (bool)
         """
         def fcn(execModule, value, buttonObj, evt):
+            #print execModule, value, buttonObj, evt
+            #print '-----------------------'
+            
             self.__dict__['_paramsGUI_setAttrSrc'] = buttonObj
             self.__setattr__(n,bool(value))
         self.__setattr__(n,v)
@@ -428,7 +375,7 @@ class guiParams(object):
                     t += '\t'
                 l.append( (t, fcn, weight,expand,tooltip) )
             else:
-                raise ValueError, "bool control type '%s' not recognized"%(c,)
+                raise ValueError("bool control type '%s' not recognized"%(c,))
         if newLine:
             l += ['\n']
 
@@ -440,7 +387,7 @@ class guiParams(object):
         return l
 
     def _bboxItemsGroup(self, label, n, v=.5, txt2val=float, val2txt="str",
-                        slider=(0,1), sl2val=(lambda x:x/100), val2sl='(lambda x:x*100)', 
+                        slider=(0,1), sl2val=(lambda x:x/100.), val2sl='(lambda x:x*100)', 
                         arrowKeyStep=0.01, newLine=False,
                         labelWeight=0, labelExpand=False, textWeight=0, textExpand=False, textWidth=-1, sliderWeight=1, sliderExpand=False, 
                         tooltip="", regFcn=None, regFcnName=None):
@@ -515,8 +462,7 @@ class guiParams(object):
         # register event handlers
         if regFcn is not None:
             from .usefulX import _registerEventHandler
-            _registerEventHandler(self.__dict__['_paramsDoOnValChg'][n], 
-                                  newFcn=regFcn, newFcnName=regFcnName) #, oldFcnName='', delAll=False)
+            _registerEventHandler(self.__dict__['_paramsDoOnValChg'][n], newFcn=regFcn, newFcnName=regFcnName) #, oldFcnName='', delAll=False)
 
         return l
 

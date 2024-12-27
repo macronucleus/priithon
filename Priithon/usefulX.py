@@ -1,20 +1,26 @@
 """Priithon Y module: all functions to do with GUI
 """
-from __future__ import absolute_import
-
+from __future__ import print_function
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
-import wx
+import six
+try:
+    import wx
+    _wx = True
+except ImportError:
+    _wx = False
+    class wx(object):
+        def __init__(self):
+            pass
+        class FileDropTarget(object):
+            def __init__(self):
+                pass
+    
 import numpy as N
 from . import PriConfig
 
-from .wxAsyncDispatcher import (startSocketServer, 
-                               startSocketServer_demo,
-                               startSocketServer_clearAll)
-
 _error =  _error0 = '' ## FIXME
-
 
 # try:
 #     _PriConfigPriithonDefaults
@@ -34,30 +40,21 @@ def _bugXiGraphics(doWorkaround=1):
     from . import mmviewer
     mmviewer.bugXiGraphics = doWorkaround
 
-
-def _guiExcept(exctype, value, tb):
-    """
-    use only in `except:`-branch 
-    shows exception in nice GUI frame
-    using `guiExceptionFrame`
-    ONLY if we are in the main thread and 
-         numberOfOpenExcWindows < PriConfig.maxOpenExceptionsWindows
-    """
-    from . import guiExceptionFrame
-    # global err_msg
-    _app_ = wx.GetApp()
-    if _app_.IsMainLoopRunning() and \
-            guiExceptionFrame.numberOfOpenExcWindows < PriConfig.maxOpenExceptionsWindows:#Safe to call MessagBox
-        wx.CallAfter(guiExceptionFrame.MyFrame, exctype, value, tb)
-        #global eee
-        #eee = exctype, value, tb
-    else:
-        #Any time execution reaches here, that means the MainWindow closed because of an error
-        sys.__excepthook__(exctype, value, tb)
-
 def _fixGuiExceptHook():
     import sys
-    sys.excepthook = _guiExcept
+    def guiExcept(exctype, value, tb):
+        from . import guiExceptionFrame
+        # global err_msg
+        _app_ = wx.GetApp()
+        if _app_.IsMainLoopRunning() and \
+                guiExceptionFrame.numberOfOpenExcWindows < PriConfig.maxOpenExceptionsWindows:#Safe to call MessagBox
+            wx.CallAfter(guiExceptionFrame.MyFrame, exctype, value, tb)
+            #global eee
+            #eee = exctype, value, tb
+        else:
+            #Any time execution reaches here, that means the MainWindow closed because of an error
+            sys.__excepthook__(exctype, value, tb)
+    sys.excepthook = guiExcept
 
 def _glutInit(argv=[]):
     global _glutInited
@@ -86,11 +83,11 @@ def _setAutosavePath():
         PriConfig._autoSaveSessionPath = \
             os.path.join(dd, PriConfig._autoSaveSessionPath)
 
-def test1():
+def test():
     """test for  viewer + histogram with colMap band"""
     #q = N.zeros((256,256), dtype=N.uint8)
     #q[:] = N.arange(256)
-    from . import fftfuncs as F
+    import Priithon.fftfuncs as F
     view( 'F.rampArr()' )
 def test2():
     """test for  viewer2 + histogram with colMap band"""
@@ -100,91 +97,111 @@ def test2():
     q[2,:] = N.arange(256)[:,None]
     view2(q)
 
-def test3():
-    """test grey viewer 3D showing white noise"""
-    from . import fftfuncs as F
-    view( 'F.noiseArr((20,256,256))' )
-def test4():
-    """test color viewer 3D showing white noise"""
-    from . import fftfuncs as F
-    view2( 'F.noiseArr((20,4,256,256))' )
-def test5():
-    """test 2d grey viewer showing fun mandelbrot in color"""
-    from . import fftfuncs as F
-    view( 'F.mandelbrotArr()' )
-    vColMap(-1, "rainbow")
-def test6():
-    """
-    test 3d grey viewer showing some Zernike Polynomials (nicely colored)
-    and start horizontal line profile on left click
-    """
-    from . import fftfuncs as F
-    view(tuple([F.zzernikeArr(shape=(256, 256), 
-                              no=ooo, 
-                              crop=1, radius=None, orig=None, dtype=N.float32) 
-                for ooo in range(49)]), title="zernike polynomials")
-    vColMap(id=-1, colmap="blackbody", reverse=0)
-    vSetSlider(-1, 33)
-    refresh()
-    vHistScale(-1)
-    #plotProfileHoriz(-1, 128)
-    vLeftClickHorizProfile(-1, avgBandSize=1, s="-")
-    v = viewers[-1]
-    ff = v.viewer.doOnLDown[-1]
-    #[<function vLeftClickDoes at 0x3dca140>]
-    ff(10,128, None)
 
 
 def editor(filename=None, retTextWindow=False):
     """
     if filename is None:
         open new <blank> file
-    elif filename is a module or function:
+    elif filename is a module:
         open the corresponding .py file if possible 
     if retTextWindow:
         return the wxStyledTextCtrl object
         this can be used to print into
     """
-    editor_fn_arg = filename
     import os.path
-    #20091022 if type(editor_filename_arg) == type(wx): # module
-    try:
-        filename = editor_fn_arg.__file__
-    except AttributeError:
-        pass
-    try:
-        filename = editor_fn_arg.func_code.co_filename
-        if filename.endswith('<string>'):
-            raise ValueError, "'%s' appears to have been defined in a <string>, not in a plain file."% ( editor_fn_arg, )
-    except AttributeError:
-        pass
+    if type(filename) == type(wx): # module
+        if hasattr(filename, "__file__"):
+            filename = filename.__file__
+            if filename[-4:-1].lower() == '.py':
+                filename = filename[:-1]
 
-    if filename is not None and filename[-4:-1].lower() == '.py':
-        filename = filename[:-1]
-
-        if not os.path.isfile(filename):
-            raise ValueError, "cannot find .py file for %s"%filename
-    #20091022     else:
-    #20091022         raise ValueError, "no __file__ attribute found to help finding .py file for %s"%filename
+            if not os.path.isfile(filename):
+                raise ValueError("cannot find .py file for %s"%filename)
+        else:
+            raise ValueError("no __file__ attribute found to help finding .py file for %s"%filename)
 
     from wx import py
-    f = py.editor.EditorFrame(parent=None,#, would kill editor without cheking for save !! sys.app.GetTopWindow(),
-                                 title="Priithon Editor",
-                                 filename=filename)
+    # ------ fix for python3 -------------
+    class Document:
+        """Document class."""
+
+        def __init__(self, filename=None):
+            """Create a Document instance."""
+            self.filename = filename
+            self.filepath = None
+            self.filedir = None
+            self.filebase = None
+            self.fileext = None
+            if self.filename:
+                self.filepath = os.path.realpath(self.filename)
+                self.filedir, self.filename = os.path.split(self.filepath)
+                self.filebase, self.fileext = os.path.splitext(self.filename)
+
+        def read(self):
+            """Return contents of file."""
+            if self.filepath and os.path.exists(self.filepath):
+                f = open(self.filepath, 'r')#b')
+                try:
+                    return f.read()
+                finally:
+                    f.close()
+            else:
+                return ''
+
+        def write(self, text):
+            """Write text to file."""
+            try:
+                f = open(self.filepath, 'w')#b')
+                f.write(text)
+            finally:
+                if f:
+                    f.close()
+    py.document.Document = Document
+
+    class MyEditorFrame(py.editor.EditorFrame):
+        def __init__(self):
+            py.editor.EditorFrame.__init__(self,
+                                           parent=None,#, would kill editor without cheking for save !! sys.app.GetTopWindow(),
+                                           title="Priithon Editor",
+                                           filename=filename)
+        def bufferCreate(self, filename=None):
+            """Create new buffer."""
+            self.bufferDestroy()
+            buffer = py.editor.Buffer()
+            self.panel = panel = wx.Panel(parent=self, id=-1)
+            panel.Bind (wx.EVT_ERASE_BACKGROUND, lambda x: x)
+            editor = py.editor.Editor(parent=panel)
+            panel.editor = editor
+            sizer = wx.BoxSizer(wx.VERTICAL)
+            sizer.Add(editor.window, 1, wx.EXPAND)
+            panel.SetSizer(sizer)
+            panel.SetAutoLayout(True)
+            sizer.Layout()
+            buffer.addEditor(editor)
+            buffer.open(filename)
+            self.setEditor(editor)
+            self.editor.setFocus()
+            self.SendSizeEvent()
+
+            # added 20180329
+            editor.GetColumn = editor.window.GetColumn
+            editor.CallTipShow = editor.window.CallTipShow
+            editor.buffer.confirmed = True # already confirmed by the dialog
+
+    # -----------------------------------
+    
+    #f = py.editor.EditorFrame(parent=None,#, would kill editor without cheking for save !! sys.app.GetTopWindow(),
+    #                             title="Priithon Editor",
+    #                             filename=filename)
+    f = MyEditorFrame()
+    
     if not filename: # we ALWAYS want bufferCreate - even when filename is "False"
         f.bufferCreate(filename)
-
-    e = f.editor.window
-
-    if hasattr(editor_fn_arg, "func_code"):
-        li_no = editor_fn_arg.func_code.co_firstlineno
-        e.GotoLine(li_no+100) # to force first line being at the top (no just the last line visible)
-        e.GotoLine(li_no-5)   # so that some preciding lines will be visible
-        e.GotoLine(li_no-1)   # so that caret will be right on (FIXME: unless 'def' spans multiple lines)
-
+        
     f.Show()
     if retTextWindow:
-        return e
+        return f.editor.window
 
 def commands():
     import __main__
@@ -268,7 +285,7 @@ def viewInViewer(id, a, title=None, doAutoscale=1):
     if that viewer is closed (or was newer opened)
     viewInViewer fails EXCEPT id==-1
       in that case a new viewer is created and gets reused
-      for subsequent calls with id=-1
+      for subsequent called with id=-1
     """
     try:
         spv =  viewers[id]
@@ -279,30 +296,18 @@ def viewInViewer(id, a, title=None, doAutoscale=1):
             view(a)
             return
         else:
-            raise RuntimeError, "viewer %d doesn't exist"%id
+            raise RuntimeError("viewer %d doesn't exist"%id)
 
-    if isinstance(a, basestring):
-        import os
-        if os.path.isfile(a):
-            a = load(a)
-        else:
-            _scoopLevel=1
-            import sys
-            fr = sys._getframe(_scoopLevel)
-            locs = fr.f_locals
-            globs = fr.f_globals
-            a,title = eval(a, globs, locs), a
-            
     from .splitND import spv as spv_class
     if not isinstance(spv, spv_class):
-        raise RuntimeError, "viewer #%d is not a mono-color viewer" % id
+        raise RuntimeError("viewer #%d is not a mono-color viewer" % id)
 
     if isinstance(a, tuple):
         from Priithon.fftfuncs import mockNDarray
         a=mockNDarray(*a)
 
     if min(a.shape) < 1:
-        raise ValueError, "array shape contains zeros (%s)"%(a.shape,)
+        raise ValueError("array shape contains zeros (%s)"%(a.shape,))
     
     #multicolor = hasattr(spv, "ColorAxisOrig") # HACK FIXME
 
@@ -359,26 +364,18 @@ def viewInViewer2(id, a, colorAxis="smart", title=None, doAutoscale=1):
         else:
             raise ValueError("viewer %d doesn't exist"%id)
 
-    if isinstance(a, basestring):
-        _scoopLevel=1
-        import sys
-        fr = sys._getframe(_scoopLevel)
-        locs = fr.f_locals
-        globs = fr.f_globals
-        a,title = eval(a, globs, locs), a
-
     from .splitND2 import spv as spv2_class
     if not isinstance(spv, spv2_class):
-        raise RuntimeError, "viewer #%d is not a multi-color viewer" % id
+        raise RuntimeError("viewer #%d is not a multi-color viewer" % id)
 
     if isinstance(a, tuple):
-        from .fftfuncs import mockNDarray
+        from Priithon.fftfuncs import mockNDarray
         a=mockNDarray(*a)
 
     if a.ndim < 3:
-        raise ValueError, "array ndim must be at least 3"
+        raise ValueError("array ndim must be at least 3")
     if min(a.shape) < 1:
-        raise ValueError, "array shape contains zeros (%s)"%(a.shape,)
+        raise ValueError("array shape contains zeros (%s)"%(a.shape,))
     
     #multicolor = hasattr(spv, "ColorAxisOrig") # HACK FIXME
 
@@ -388,22 +385,22 @@ def viewInViewer2(id, a, colorAxis="smart", title=None, doAutoscale=1):
         
         # use shortest "z-dimension" as color - use smaller axisIndex if two are of same length
         notShort = 1+ max(nonXYshape) # use this to have   axes of length 1  ignored
-        nonXYshape = map(lambda x:  x>1 and x or notShort, nonXYshape) # ignore axes of length 1
+        nonXYshape = [x>1 and x or notShort for x in nonXYshape] # ignore axes of length 1
         colorAxis = nonXYshape.index( min(nonXYshape) )
     if colorAxis < 0:
         colorAxis += a.ndim
     if colorAxis < a.ndim - 3:
-        a=N.transpose(a, range(colorAxis) + \
-                          range(colorAxis+1,a.ndim-2)+\
+        a=N.transpose(a, list(range(colorAxis)) + \
+                          list(range(colorAxis+1,a.ndim-2))+\
                           [colorAxis,a.ndim-2,a.ndim-1] )
     elif colorAxis == a.ndim - 2:
-        a=N.transpose(a, range(a.ndim-3) + [colorAxis, a.ndim-3, a.ndim-1] )
+        a=N.transpose(a, list(range(a.ndim-3)) + [colorAxis, a.ndim-3, a.ndim-1] )
 
     elif colorAxis == a.ndim - 1:
-        a=N.transpose(a, range(a.ndim-3) + [colorAxis, a.ndim-3, a.ndim-2] )
+        a=N.transpose(a, list(range(a.ndim-3)) + [colorAxis, a.ndim-3, a.ndim-2] )
 
     if a.shape[-3] > 8:
-        raise ValueError, "You should not use more than 8 colors (%s)"%a.shape[-3]
+        raise ValueError("You should not use more than 8 colors (%s)"%a.shape[-3])
 
 
     #print a.ndim-2, spv.zndim
@@ -486,14 +483,17 @@ class _listFilesViewer:
         self.lb = wx.ListBox(self.frame, wx.ID_ANY, size=(300,400)) #, choices=cl) #, wx.LB_SINGLE)
         sizer.Add(self.lb, 1, wx.EXPAND | wx.ALL, 5)
         #wx.EVT_LISTBOX(f, 60, self.EvtListBox)
-        wx.EVT_MOTION(self.lb, self.onStartDrag)
+        #wx.EVT_MOTION(self.lb, self.onStartDrag)
+        self.lb.Bind(wx.EVT_MOTION, self.onStartDrag)
 
 
         # wx.EVT_LISTBOX_DCLICK(self.frame, 1001, onDClick)
         # 20080423ProblemSeeWx-Dev2008Jan("wxlistbox enter") wx.EVT_LISTBOX_DCLICK(self.frame, self.lb.GetId(), lambda ev:onDClick(ev, chdir=True))
         # 20080423ProblemSeeWx-Dev2008Jan("wxlistbox enter") wx.EVT_LISTBOX(self.frame, self.lb.GetId(), lambda ev:onDClick(ev, chdir=False))
-        wx.EVT_LISTBOX(self.frame, self.lb.GetId(), lambda ev:self.onDClick(ev, chdir=False))
-        wx.EVT_LISTBOX_DCLICK(self.frame, self.lb.GetId(), lambda ev:self.onDClick(ev, chdir=True))
+        #wx.EVT_LISTBOX(self.frame, self.lb.GetId(), lambda ev:self.onDClick(ev, chdir=False))
+        self.frame.Bind(wx.EVT_LISTBOX, lambda ev:self.onDClick(ev, chdir=False), id=self.lb.GetId())
+        #wx.EVT_LISTBOX_DCLICK(self.frame, self.lb.GetId(), lambda ev:self.onDClick(ev, chdir=True))
+        self.frame.Bind(wx.EVT_LISTBOX_DCLICK, lambda ev:self.onDClick(ev, chdir=True), id=self.lb.GetId())
         # wx.EVT_RIGHT_UP(self.lb1, self.EvtRightButton)
 
         hsz = wx.BoxSizer(wx.HORIZONTAL)
@@ -501,7 +501,8 @@ class _listFilesViewer:
 
         self.txt = wx.TextCtrl(self.frame, wx.ID_ANY, self.getPath())
         hsz.Add(self.txt, 1, wx.EXPAND|wx.ALL, 2)
-        wx.EVT_TEXT(self.frame, self.txt.GetId(), self.refreshList)
+        #wx.EVT_TEXT(self.frame, self.txt.GetId(), self.refreshList)
+        self.frame.Bind(wx.EVT_TEXT, self.refreshList, id=self.txt.GetId())
     
         self.autoscale = wx.CheckBox(self.frame, wx.ID_ANY, "autoscale")
         hsz.Add(self.autoscale, 0, wx.EXPAND|wx.ALL, 2)
@@ -707,7 +708,7 @@ class _listArrayViewer:
     def __init__(self, modname='__main__', viewerID=None):
         self.viewerID = viewerID
         self.modname  = modname
-        #20091208-PyFlakes import sys
+        import sys
     
         self.frame = wx.Frame(None, -1, "") #, size=wx.Size(400,400))
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -810,10 +811,10 @@ class _listArrayViewer:
         arrs = {}
     
         def sebsort(m1,m2):
-            import __builtin__
+            import builtins
             k1 = arrs[ m1 ][1]
             k2 = arrs[ m2 ][1]
-            return __builtin__.cmp(k1,  k2)
+            return builtins.cmp(k1,  k2)
 
         for k in showdict:
             o = showdict[k]
@@ -891,51 +892,52 @@ def saveSession(fn=None, autosave=False):
     
     import sys
     if hasattr(sys, "app"):       # PyShell, PyCrust, ...
-        shell = sys.app.frame.shell
+        #shell = sys.app.frame.shell
+        import __main__
+        shell = __main__.shell
 #     elif hasattr(sys, "shell"): # embedded in OMX
 #         import __main__
 #         shell = __main__.shell
 #         #shell = sys.shell
     else:
-        raise RuntimeError, "sorry, can't find shell"
-    import codecs
+        #raise RuntimeError, "sorry, can't find shell"
+        return
 
     if autosave:
         if fn is not None:
-            raise ValueError, "you cannot specify a filename when autosave=True"
+            raise ValueError("you cannot specify a filename when autosave=True")
         
-        import os
-        from . import useful as U
+        import os, useful as U
         U.path_mkdir( os.path.dirname(PriConfig._autoSaveSessionPath) )
         fn = PriConfig._autoSaveSessionPath
 
         # save text file containing only the commands (no return vals or prints)
         if PriConfig.autoSaveSessionCommands:
             #import __main__
-            f = codecs.open(fn[:-3]+PriConfig.autoSaveSessionCommands, 'w', encoding='u8')
+            f = file(fn[:-3]+PriConfig.autoSaveSessionCommands, 'w')
             #for c in __main__.shell.history[::-1]:
             for c in shell.history[::-1]:
-                print >>f, c
+                print(c, file=f)
             f.close()
 
     if fn is None:
         import time
         # global _saveSessionDefaultPrefix
         fn = PriConfig.saveSessionDefaultPrefix + time.strftime("%Y%m%d-%H%M.py")
-        fn = wx.FileSelector("Please select file", "",fn, flags=wx.SAVE)
+        fn = wx.FileSelector("Please select file", "",fn, flags=wx.FD_SAVE)
 
     if not fn: # cancel
         return
 
-    f = codecs.open(fn, "w", encoding='u8')
+    f = open(fn, "w")
     #f.write(shell.GetText().replace('\r', ''))
     f.write(shell.GetText().encode("l1").replace('\r', ''))
     #f.write("\n") # append trailing newline, that appears to be missing in shell.GetText
     f.close()
-    print "# '%s' saved." %( fn, )
+    print("# '%s' saved." %( fn, ))
     
     
-def FN(save=0, verbose=1):
+def FN_seb(save=0, verbose=1):
     """use mouse to get filename
 
     if verbose is true: also print filename
@@ -943,14 +945,63 @@ def FN(save=0, verbose=1):
 
     ## frame title, start-dir, default-filename, ??, default-pattern
     if save:
-        flags=wx.SAVE
+        flags=wx.FD_SAVE
     else:
         flags=0
     fn = wx.FileSelector("Please select file", flags=flags)
     if verbose:
-        print repr(fn)
+        print(repr(fn))
     return fn
 
+_DIR = None
+_WILDCARD = '*'
+def FN(save=0):
+    if save:
+        return FN_seb(save, verbose=0)
+    else:
+        return FNs_am(multiple=False)
+
+def FNs(verbose=False):
+    fns = FNs_am()
+    if verbose:
+        print(repr(fns))
+    return fns
+
+def FNs_am(multiple=True):
+    """
+    open fileselector dialog
+    return fns
+    """
+    global _DIR, _WILDCARD
+    try:
+        from common import guiFuncs as G
+        import os
+    except ImportError:
+        raise NotImplementedError('Please install PriCommon')
+
+    fns = None
+    with G.FileSelectorDialog(direc=_DIR, wildcard=_WILDCARD, multiple=multiple) as dlg:
+        if dlg.ShowModal():
+            fns = dlg.GetPaths()
+            if fns:
+                _DIR = os.path.dirname(fns[0])
+                _WILDCARD = dlg.fnPat
+                if not multiple:
+                    fns = fns[0]
+    return fns
+
+def view3(fns):
+    """
+    opens a memory efficient viewer with orthogonal view
+    """
+    try:
+        import ndviewer
+        import os
+    except ImportError:
+        raise NotImplementedError('Please install ndviewer')
+
+    return ndviewer.main.main(fns, useCropbox=True)
+        
 def DIR(verbose=1):
     """use mouse to get directory name
 
@@ -964,7 +1015,7 @@ def DIR(verbose=1):
         d = "/"
     fn = wx.DirSelector("Please select directory", d)
     if verbose:
-        print repr(fn)
+        print(repr(fn))
     return fn
 
 def cd():
@@ -988,20 +1039,15 @@ def sleep(secs=1):
     except:
         pass # maybe we don't have wx...
 
-def iterChildrenTree(parent, includeParent=True, topdown=True):
+def iterChildrenTree(parent, includeParent=True):
     """
     iterate of all children and child's childrens of a `parent` wxWindow
     this is an iterator!
-    if topdown is False:
-       return the children's children before the children
     """
-    if includeParent and topdown:
-        yield parent
+    yield parent
     for c in parent.GetChildren():
-        for i in iterChildrenTree(c, True, topdown):
+        for i in iterChildrenTree(c, True):
             yield i
-    if includeParent and not topdown:
-        yield parent
 
 
 ###############################################################################
@@ -1010,20 +1056,13 @@ def iterChildrenTree(parent, includeParent=True, topdown=True):
 ###############################################################################
 
 
-from . import plt
-#from .usefulP import *
-#SyntaxError: 'import *' not allowed with 'from .'
-#<hack>
-from . import usefulP
-for n in usefulP.__dict__:
-    if not n.startswith('_'):
-        exec "%s = usefulP.%s" % (n,n)
-del n, usefulP
-#</hack>
+#from . import plt
+if _wx:
+    from .usefulP import *
 
 
 
-def plotProfileHoriz(img_id, y, avgBandSize=1, s='-'):
+def plotProfileHoriz(img_id, y, avgBandSize=1):#, s='-'):
     if type(img_id) == int:
         img = viewers[ img_id ].img
     else:
@@ -1032,10 +1071,10 @@ def plotProfileHoriz(img_id, y, avgBandSize=1, s='-'):
 
     if avgBandSize >1:
         vals = N.sum( img[ y:y+avgBandSize ].astype(N.float64), 0 ) / float(avgBandSize)
-        ploty( vals, s )
+        ploty( vals, symbolSize=0)#s )
     else:
-        ploty( img[ y ], s )
-def plotProfileVert(img_id, x, avgBandSize=1, s='-'):
+        ploty( img[ y ], symbolSize=0)#s )
+def plotProfileVert(img_id, x, avgBandSize=1):#, s='-'):
     if type(img_id) == int:
         img = viewers[ img_id ].img
     else:
@@ -1044,10 +1083,10 @@ def plotProfileVert(img_id, x, avgBandSize=1, s='-'):
 
     if avgBandSize >1:
         vals = N.sum( img[ :, x:x+avgBandSize ].astype(N.float64), 1 ) / float(avgBandSize)
-        ploty( vals, s )
+        ploty( vals, symbolSize=0)#s )
     else:
-        ploty( img[ :, x ], s )
-def plotProfileZ(img_id, y,x, avgBandSize=1, s='-'):
+        ploty( img[ :, x ], symbolSize=0)#s )
+def plotProfileZ(img_id, y,x, avgBandSize=1):#, s='-'):
     if type(img_id) == int:
         data = viewers[ img_id ].data
     else:
@@ -1062,20 +1101,20 @@ def plotProfileZ(img_id, y,x, avgBandSize=1, s='-'):
         prof = N.empty(shape=nz, dtype=N.float64)
         for z in range(nz):
             prof[z] = data[z,  y0:y1, x0:x1].mean()
-        ploty( prof, s )
+        ploty( prof, symbolSize=0)#s )
     else:
-        ploty( data[ :, int(y), int(x) ], s )
+        ploty( data[ :, int(y), int(x) ], symbolSize=0)#s )
 
 '''
 
 def plotFitAny(f, parms, min=None,max=None,step=None,hold=True,s='-'):
     """
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    from . import useful as U
+    import useful as U
     import __builtin__
     if min is None or max is None:
         dpx = plotDatapoints(0)[0]
@@ -1092,39 +1131,39 @@ def plotFitAny(f, parms, min=None,max=None,step=None,hold=True,s='-'):
 
 def plotFitLine(abTuple, min=None,max=None,step=None,hold=True,s='-'):
     """
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    from . import useful as U
+    import useful as U
     plotFitAny(U._poly,(abTuple[1],abTuple[0]), min,max,step,hold,s)
 def plotFitPoly(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    from . import useful as U
+    import useful as U
     plotFitAny(U._poly, parms, min,max,step,hold,s)
 def plotFitDecay(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    from . import useful as U
+    import useful as U
     plotFitAny(U._decay, parms, min,max,step,hold,s)
 def plotFitGaussian1D(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    from . import useful as U
+    import useful as U
     if   len(parmTuple0) == 2:
         f = U._gaussian1D_2
     elif len(parmTuple0) == 3:
@@ -1145,24 +1184,24 @@ def plotFitGaussian1D(parms, min=None,max=None,step=None,hold=True,s='-'):
 
 
 
-def plotFitAny(func, parms, min=None,max=None,step=None,hold=True,s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
+def plotFitAny(func, parms, min=None,max=None,step=None,hold=True,dataset=0,doFit=True, figureNo=None):#s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
     """
     if min is None defaults to min-x of current plot (for given dataset)
     if max is None defaults to max-x of current plot (for given dataset)
-    if step is None defaults to 1000 points between min and max
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
 
     if doFit:
       do a curve fit to adjust parms  before plotting
       return (parms, fitFlag)
     """
-    import __builtin__
+    import builtins
     if min is None or max is None:
         dpx = plotDatapoints(dataset,figureNo)[0]
         if min is None:
-            min = __builtin__.min(dpx)
+            min = builtins.min(dpx)
         if max is None:
-            max = __builtin__.max(dpx)
+            max = builtins.max(dpx)
     if step is None:
         step = (max-min)/1000.
 
@@ -1172,96 +1211,77 @@ def plotFitAny(func, parms, min=None,max=None,step=None,hold=True,s='-', dataset
         data = N.asarray(plotDatapoints(dataset, figureNo), dtype=N.float64)
         parms, ret = U.fitAny(func, parms, data.T)
         
-    plotxy(x,func(parms,x), s, hold=hold, logY=logY, logX=logX, logZeroOffset=logZeroOffset, figureNo=figureNo)
+    #plotxy(x,func(parms,x), s, hold=hold, logY=logY, logX=logX, logZeroOffset=logZeroOffset, figureNo=figureNo)
+    plotxy(x,func(parms,x), c='-', hold=hold, figureNo=figureNo)#, symbolSize=0)
+    plothold(0)
     if doFit:
         return parms, ret
 
-def plotFitDecay(parms=(1000,10000,10), min=None,max=None,step=None,hold=True,s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
+def plotFitDecay(parms=(1000,10000,10), min=None,max=None,step=None,hold=True,dataset=0,doFit=True, figureNo=None): #s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
     """
     see U.yDecay.
-        tuple of 1 or 3 or 5 or .. values
-        first baseline = asymtote =y for t-> inf
-        then pairs:
-          first:  intercept of an exponential decay
-          second: half-time of an exponential decay
-
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
     from . import useful as U
-    return plotFitAny(U.yDecay, parms, min,max,step,hold,s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
+    return plotFitAny(U.yDecay, parms, min,max,step,hold,dataset,doFit, figureNo) #s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
 
-def plotFitGaussian(parms=(0,10,100), min=None,max=None,step=None,hold=True,s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
+def plotFitGaussian(parms=(0,10,100), min=None,max=None,step=None,hold=True,dataset=0,doFit=True,figureNo=None):#s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
     """
     see U.yGaussian.
-       2- tuple is [sigma, peakVal]
-       3- tuple is [x0, sigma, peakVal]
-       4- tuple is [y0, x0, sigma, peakVal]
-
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
     from . import useful as U
-    return plotFitAny(U.yGaussian, parms, min,max,step,hold,s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
+    return plotFitAny(U.yGaussian, parms, min,max,step,hold,dataset,doFit, figureNo)#s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
 
-def plotFitLine(abTuple=(1,1), min=None,max=None,step=None,hold=True,s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
+def plotFitLine(abTuple, min=None,max=None,step=None,hold=True,dataset=0,doFit=True,figureNo=None):#s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
     """
-    see U.yPlot...
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
     from . import useful as U
-    return plotFitAny(U.yLine, abTuple, min,max,step,hold,s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
-def plotFitPoly(parms=(1,1,1), min=None,max=None,step=None,hold=True,s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
+    return plotFitAny(U.yLine, abTuple, min,max,step,hold,dataset,doFit, figureNo)#s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
+def plotFitPoly(parms, min=None,max=None,step=None,hold=True,dataset=0,doFit=True,figureNo=None):#s='-', dataset=0, doFit=True, figureNo=None, logY=False, logX=False, logZeroOffset=.01):
     """
-    see U.yPoly.
-      baseline, first-order coeff, 2nd, ...
-
-    if min is None defaults to min-x of given `dataset` in given plot
-    if max is None defaults to max-x of given `dataset` in given plot
-    if step is None defaults to 1000 points between min and max
+    if min is None defaults to min-x of current plot (dataset 0)
+    if max is None defaults to max-x of current plot (dataset 0)
+    if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
     from . import useful as U
-    return plotFitAny(U.yPoly, parms, min,max,step,hold,s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
-
+    return plotFitAny(U.yPoly, parms, min,max,step,hold,dataset,doFit, figureNo)#s, dataset, doFit, figureNo=figureNo, logY=logY, logX=logX, logZeroOffset=logZeroOffset)
 
 
 def plotHistogram(a, nBins=None, amin=None,amax=None, histArr=None, norm=False, cumsum=False, exclude_amax=False,
-                  c=plot_defaultStyle, logY=False, logX=False, hold=None, logZeroOffset=.01, figureNo=None):
+                  #c=plot_defaultStyle, logY=False, logX=False, hold=None, logZeroOffset=.01, figureNo=None):
+                  color=None, hold=None, figureNo=None):
     """
     shortcut for Y.plotxy(U.histogramXY(a,...),...)
     """
     from .useful import histogramXY
     plotxy(histogramXY(a, nBins=nBins, amin=amin,amax=amax, histArr=histArr, norm=norm, cumsum=cumsum, exclude_amax=exclude_amax),
-             c=c, logY=logY, logX=logX, hold=hold, logZeroOffset=logZeroOffset, figureNo=figureNo)
+             color=color, hold=hold, figureNo=figureNo)#, logY=logY, logX=logX, hold=hold, logZeroOffset=logZeroOffset, figureNo=figureNo)
     
+try:
+    from .gridviewer import gridview
+except ImportError:
+    pass
 
-from .gridviewer import gridview
+if _wx:
+    from .histogram import hist as histogram
+    from .mmviewer import mview
+    from .scalePanel import scalePanel
+    from .zslider import ZSlider
 
-#  try:
-from .histogram import hist as histogram
-from .mmviewer import mview
-from .scalePanel import scalePanel
-from .zslider import ZSlider
-
-from .guiParams import guiParams
-#from .buttonbox import *
-#SyntaxError: 'import *' not allowed with 'from .'
-#<hack>
-from . import buttonbox
-for n in buttonbox.__dict__:
-    if not n.startswith('_'):
-        exec "%s = buttonbox.%s" % (n,n)
-del n, buttonbox
-#</hack>
-
+    from .buttonbox import *
+    from .guiParams import guiParams
 
 #HIST= #dictionary
 #VIEW= #dictionary
@@ -1269,7 +1289,7 @@ del n, buttonbox
 ''' 20080721 unused !?
 def hist(viewer, resolution=0):
     """old"""
-    from . import useful as U
+    import useful as U
     try:
         img  = viewer.m_imgArr
     except:
@@ -1360,12 +1380,13 @@ try:
 except:
     viewers=[]
 
-from .splitND import run as view
-from .splitND2 import run as view2
+if _wx:
+    from .splitND import run as view
+    from .splitND2 import run as view2
 
 
-from .DragAndDrop import DropFrame
-from .viewerRubberbandMode import viewerRubberbandMode as vROI
+    from .DragAndDrop import DropFrame
+    from .viewerRubberbandMode import viewerRubberbandMode as vROI
 
 def vd(id=-1):
     """
@@ -1442,15 +1463,18 @@ def vClose(id='all'):
     close viewer with given id
     id can be a number, a sequence of numbers, or 'all'
     """
-    if id is 'all':
-        id  = range(len(viewers))
+    if id == 'all':
+        id  = list(range(len(viewers)))
     elif type(id) == int:
         id = [id]
 
     for i in id:
         v = viewers[i]
         if v:
-            wx.GetTopLevelParent(v.viewer).Close()
+            try:
+                wx.GetTopLevelParent(v.viewer).Close()
+            except RuntimeError: # in some reason this happens...
+                viewers[i] = None
 
 def vReload(id=-1, autoscale=True):
     """
@@ -1503,7 +1527,7 @@ def vArrange(idxs=-1, nx=4, refSizeId=None, doCenter=1, x0=0, y0=0):
     as many columns as needed
     """
     if idxs==-1:
-        idxs = range(len(viewers))
+        idxs = list(range(len(viewers)))
     first = 1
     x,y = x0,y0
     ix,iy = 0,0
@@ -1551,8 +1575,8 @@ def vHistSettings(id_src=-2, id_target=-1):
     """
     copy settings from one viewer (viewer2) to another
     """
-    from . import splitND
-    from . import splitND2
+    from Priithon import splitND
+    from Priithon import splitND2
     #isinstance(v, splitND.spv)
     spvFrom=viewers[id_src]
     spvTo = viewers[id_target]
@@ -1591,7 +1615,7 @@ def vHistSettings(id_src=-2, id_target=-1):
         vColMap(id_target, spvFrom.viewer.colMap)
 
     else:
-        raise ValueError, "src and target are different type viewers (%s vs. %s)" %(spvFrom.__class__, spvTo.__class__)
+        raise ValueError("src and target are different type viewers (%s vs. %s)" %(spvFrom.__class__, spvTo.__class__))
 
 def vGetZSecTuple(id=-1):
     """
@@ -1612,7 +1636,7 @@ def vShortcutAdd(id=-1, key=' ', func='Y.wx.Bell()', mod=0):
     """
     v = viewers[id]
 
-    if isinstance(key, basestring):
+    if isinstance(key, six.string_types):
         if key.isupper():
             mod = mod | wx.MOD_SHIFT
         if key.islower():
@@ -1623,7 +1647,7 @@ def vShortcutAdd(id=-1, key=' ', func='Y.wx.Bell()', mod=0):
     if type(func) == str:
         def shortcutFunc():
             import __main__
-            exec func in __main__.__dict__
+            exec(func, __main__.__dict__)
     else:
         shortcutFunc = func
 
@@ -1668,8 +1692,8 @@ def vZoomGet(v_id, returnCYX=False):
         v_id = viewers[v_id].viewer
 
     if returnCYX:
-        cx=(v_id.m_w/2-v_id.m_x0) / v_id.m_scale
-        cy=(v_id.m_h/2-v_id.m_y0) / (v_id.m_scale*v_id.m_aspectRatio)
+        cx=(v_id.m_w/2.-v_id.m_x0) / v_id.m_scale
+        cy=(v_id.m_h/2.-v_id.m_y0) / (v_id.m_scale*v_id.m_aspectRatio)
         return v_id.m_scale, N.array((cy,cx))
     else:
         return v_id.m_scale
@@ -1760,6 +1784,8 @@ def vColMap(id=-1, colmap="", reverse=0):
       lo[g]       log-scale
       mi[nmaxgray] (both mi or mm work)
       bl[ackbody]
+      ma[gma]
+      vi[ridis]
       ra[inbow]
       wh[eel] red-green-blue-red
       wh[eel]XX  (last two characters must be digits: number-of-wheel-cycles)
@@ -1768,21 +1794,22 @@ def vColMap(id=-1, colmap="", reverse=0):
 
     if colmap is a numpy array, the array is used directly as colmap
        it should be of shape (3, 256)
-       if reverse is True: use array reversed (i.e. colmap[:, ::-1])
-    colmap can also be a sequence of colors:
-       e.g. colmap= ['darkred', 'red', 'orange', 'yellow', 'green', 'blue', 'darkblue', 'violet']
     """
     v = viewers[id].viewer
-    if isinstance(colmap, basestring):
+    if isinstance(colmap, six.string_types):
         colmap = colmap.lower()
         if colmap == "":
             v.cmnone()
-        elif   colmap.startswith("bl"):
+        elif colmap.startswith("bl"):
             v.cmblackbody(reverse=reverse)
         elif colmap.startswith("ra"):
             v.cmcol(reverse=reverse)
         elif colmap.startswith("lo"):
             v.cmlog()
+        elif colmap.startswith("ma"):
+            v.cmmagma()
+        elif colmap.startswith("vi"):
+            v.cmviridis()
         elif colmap.startswith("mm") or colmap.startswith("mi"):
             v.cmGrayMinMax()
         elif colmap.startswith("wh"):
@@ -1794,18 +1821,10 @@ def vColMap(id=-1, colmap="", reverse=0):
     elif isinstance(colmap, N.ndarray):
         #20080407  v.colMap = N.zeros(shape=(3, v.cm_size), dtype=N.float32)
         #20080407 v.colMap[:] = colmap
-        if reverse:
-            v.colMap = colmap[:, ::-1].copy()
-        else:
-            v.colMap = colmap.copy()
+        v.colMap = colmap.copy()
 
         v.changeHistogramScaling()
         v.updateHistColMap()
-    elif isinstance(colmap, (list, tuple)):
-        v.cms(colseq=colmap, reverse=reverse)
-        v.changeHistogramScaling()
-        v.updateHistColMap()
-        
 # v.cmgray(gamma=1)
 # v.cmgray(gamma=12)
 # v.cmgray(gamma=.3)
@@ -1824,63 +1843,7 @@ def vSetSlider(v_id=-1, z=0, zaxis=0, autoscale=False): #, refreshNow=False)
 
     if autoscale:
         #20090109     vScale(v_id)
-        print "#DEBUG - FIXME 20090109 - autoscale=True in Y.setSlider somehow not implemented...."
-
-
-
-def vPlotAsSliderGUI(vid=-1, figNo=-1, zaxis=0, activate=True):
-    """
-    use a plot figure as z-slider by clicking into that plot
-    a GUI control window will open
-    given arguments are used as default values
-    note: changing `figNo` in GUI (maybe) requires to click `active` 
-          before and after to 
-    """
-    gp = guiParams()
-    def onLeft(x,y):
-        try:
-            v=viewers[gp.vid]
-            ax=gp.zAxis
-            if x<0:
-                x=0
-            if x>=v.zshape[ax]:
-                x=v.zshape[ax]-1
-
-            vSetSlider(v, x, zaxis=ax)
-
-        except:
-            wx.Bell()
-
-    def plotAsViewerSlider(val, name):
-        try:
-            if val:
-                plotMouseEventHandlerSet_fct_XY_OnLeft(onLeft, onlyOnClick=False, figureNo=gp.figNo)
-            else:
-                plotMouseEventHandlerSet(handler=None, figureNo=gp.figNo)
-        except:
-            wx.Bell()
-
-    buttonBox(
-        gp._bboxInt("figNo:", 'figNo', v=figNo,slider=False, newLine=False,
-                    textWidth=30, 
-                    tooltip="""figure number of plot to be used as z-control for given viewer""") +
-        gp._bboxBool("active", 'active', v=activate, controls='tb', newLine=False,
-                     tooltip="""active/deactive plot function as z-slider""",
-                     regFcn=plotAsViewerSlider)+
-        gp._bboxInt("vid:", 'vid', v=vid, slider=False, newLine=False,
-                    textWidth=30, 
-                    tooltip="""viewer to be controled""") +
-        gp._bboxInt("zAxis:", 'zAxis', v=zaxis,slider=False, newLine=False,
-                    textWidth=30, 
-                    tooltip="""z-axis to be controled""") +
-        [],
-        title="plot figure as viewer z-slider",
-        execModule=gp)
-
-    if activate:
-        plotAsViewerSlider(True, 'blah')
-
-
+        print("#DEBUG - FIXME 20090109 - autoscale=True in Y.setSlider somehow not implemented....")
 def vSetAspectRatio(v_ids=[-1], y_over_x=1, refreshNow=1):
     """
     strech images in y direction
@@ -1949,7 +1912,7 @@ def vSaveRGBviewport(v_id, fn, clip=True, flipY=True):
     from . import useful as U
     a = v_id.readGLviewport(clip=clip, flipY=flipY, copy=True)
 
-    U.saveImg(a, fn)
+    U.saveImg(a, fn, rescaleTo8bit=False)
 
 def vCopyToClipboard(v_id=-1, clip=True):
     """
@@ -1962,12 +1925,13 @@ def vCopyToClipboard(v_id=-1, clip=True):
     aa = v_id.readGLviewport(clip=clip, flipY=True, copy=0)
     ny,nx = aa.shape[-2:]
 
-    im = wx.ImageFromData(nx,ny,aa.transpose((1,2,0)).tostring())
+    #im = wx.ImageFromData(nx,ny,aa.transpose((1,2,0)).tostring()) -> depricated 20240606
+    im = wx.Image(nx,ny,aa.transpose((1,2,0)).tobytes())
     #test im.SaveFile("clipboard.png", wx.BITMAP_TYPE_PNG)
     bi=im.ConvertToBitmap()
     bida=wx.BitmapDataObject(bi)
     if not wx.TheClipboard.Open():
-        raise RuntimeError, "cannot open clipboard"
+        raise RuntimeError("cannot open clipboard")
     try:
         success = wx.TheClipboard.SetData(bida)
         # success seems to be always True
@@ -1977,7 +1941,7 @@ def vCopyToClipboard(v_id=-1, clip=True):
 
 def vresizeto(refId=0, idxs=-1, nx=4):
     if idxs==-1:
-        idxs = range(555)
+        idxs = list(range(555))
     s = wx.GetTopLevelParent(viewers[refId].viewer).GetSize()
     
     for i in idxs:
@@ -1995,14 +1959,6 @@ def vresizeto(refId=0, idxs=-1, nx=4):
         f.Raise()
       except:
         pass
-
-def vRaise(v_id=-1):
-    if type(v_id)  is int:
-        spv = viewers[v_id]
-    else:
-        spv=v_id
-    f = wx.GetTopLevelParent(spv.viewer)
-    f.Raise()
 
 def vRotate(v_id, angle=None):
     """
@@ -2074,7 +2030,7 @@ def vzslider(idxs=None, nz=None, title=None):
                     nz = v.zshape[zaxis]
             except:
                 pass
-    def onz(z, _ev):
+    def onz(z):
         for i in idxs:
             try:
                 i,zaxis = i
@@ -2110,6 +2066,7 @@ _plotprofile_avgSize=1
 
 def vLeftClickHorizProfile(id=-1, avgBandSize=1, s='-'):
     v = viewers[id]
+    h,w = v.img.shape
 
     global _plotprofile_avgSize
     _plotprofile_avgSize = avgBandSize
@@ -2117,21 +2074,21 @@ def vLeftClickHorizProfile(id=-1, avgBandSize=1, s='-'):
     def f(x,y):
         if _plotprofile_avgSize >1:
             vals = N.sum( v.img[ y:y+_plotprofile_avgSize ].astype(N.float64), 0 ) / float(_plotprofile_avgSize)
-            ploty( vals, s )
+            ploty( vals, symbolSize=0)#s )
         else:
-            ploty( v.img[ y ], s )
+            ploty( v.img[ y ], symbolSize=0)#s )
     def fg(x,y):
-        h,w = v.img.shape # note: image of viewer could have changed "in-pace" (viewInViewer)
         if _plotprofile_avgSize >1:
-            glLine(0-.5,y-.5,w-.5,y-.5, PriConfig.defaultGfxColor)
-            glLine(0-.5,y+_plotprofile_avgSize-.5,w-.5,y+_plotprofile_avgSize-.5, PriConfig.defaultGfxColor)
+            glLine(0,y,w,y, PriConfig.defaultGfxColor)
+            glLine(0,y+_plotprofile_avgSize,w,y+_plotprofile_avgSize, PriConfig.defaultGfxColor)
         else:
-            glLine(0-.5,y,w-.5,y, PriConfig.defaultGfxColor)
+            glLine(0,y+.5,w,y+.5, PriConfig.defaultGfxColor)
 
     vLeftClickDoes(id, callGlFn=fg, callFn=f)
 
 def vLeftClickVertProfile(id=-1, avgBandSize=1, s='-'):
     v = viewers[id]
+    h,w = v.img.shape
 
     global _plotprofile_avgSize
     _plotprofile_avgSize = avgBandSize
@@ -2139,22 +2096,27 @@ def vLeftClickVertProfile(id=-1, avgBandSize=1, s='-'):
     def f(x,y):
         if _plotprofile_avgSize >1:
             vals = N.sum( v.img[ :, x:x+_plotprofile_avgSize ].astype(N.float64), 1 ) / float(_plotprofile_avgSize)
-            ploty( vals, s )
+            ploty( vals, symbolSize=0)#s )
         else:
-            ploty( v.img[ :, x ], s )
+            ploty( v.img[ :, x ], symbolSize=0)#s )
     def fg(x,y):
-        h,w = v.img.shape
         if _plotprofile_avgSize >1:
-            glLine(x-.5,0-.5,x-.5,h-.5, PriConfig.defaultGfxColor)
-            glLine(x+_plotprofile_avgSize-.5,0-.5,x+_plotprofile_avgSize-.5,h-.5, PriConfig.defaultGfxColor)
+            glLine(x,0,x,h, PriConfig.defaultGfxColor)
+            glLine(x+_plotprofile_avgSize,0,x+_plotprofile_avgSize,h, PriConfig.defaultGfxColor)
 
         else:
-            glLine(x,0-.5,x,h-.5, PriConfig.defaultGfxColor)
+            glLine(x+.55555,0,x+.55555,h, PriConfig.defaultGfxColor)
 
     vLeftClickDoes(id, callGlFn=fg, callFn=f)
 
 def vLeftClickZProfile(id=-1, avgBoxSize=1, s='-', slice=Ellipsis):
     v = viewers[id]
+
+    data = v.data[slice]
+
+    if data.ndim != 3:
+        raise ValueError("ZProfile only works for 3D data (TODO: for 4+D)")
+    nz = data.shape[0]
 
     global _plotprofile_avgSize # 20051025
     _plotprofile_avgSize = avgBoxSize # 20051025
@@ -2165,32 +2127,25 @@ def vLeftClickZProfile(id=-1, avgBoxSize=1, s='-', slice=Ellipsis):
     v.poly = N.zeros(2*v.polyLen, N.float64)
         
     def f(x,y):
-        # note: image of viewer could have changed "in-pace" (viewInViewer)
-        data = v.data[slice] 
-
-        if data.ndim != 3:
-            raise ValueError, "ZProfile only works for 3D data (TODO: for 4+D)"
-        nz = data.shape[0]
-
         if _plotprofile_avgSize >1:
             w,h = _plotprofile_avgSize,_plotprofile_avgSize
             w2,h2 = w/2., h/2.
             v.poly[:] = x0,y0,x1,y1 = int(x-w2+.5),int(y-h2+.5),  int(x+w2+.5),int(y+h2+.5)
-            #20091208-PyFlakes from useful import mean2d
+            from .useful import mean2d
             prof = N.empty(shape=nz, dtype=N.float)
             for z in range(nz):
                 prof[z] = data[z,  y0:y1, x0:x1].mean()
             #prof = mean2d(a[:,  y0:y1, x0:x1])   ##->  TypeError: Can't reshape non-contiguous numarray
-            ploty( prof, s )
+            ploty( prof, symbolSize=0)#s )
         else:
-            ploty( data[ :, int(y), int(x) ], s )
+            ploty( data[ :, int(y), int(x) ], symbolSize=0)#s )
     def fg(x,y):
         if _plotprofile_avgSize >1:
             x0,y0,x1,y1 = v.poly
             glBox(x0,y0,x1,y1, PriConfig.defaultGfxColor)
         else:
-            glCross(int(x), int(y), length=50, color=PriConfig.defaultGfxColor)
-    vLeftClickDoes(id, callGlFn=fg, callFn=f, roundCoords2int=True) # 20091112(_plotprofile_avgSize==0))
+            glCross(int(x)+0.55555, int(y)+0.55555, length=50, color=PriConfig.defaultGfxColor)
+    vLeftClickDoes(id, callGlFn=fg, callFn=f, roundCoords2int=(_plotprofile_avgSize==0))
 
 def vLeftClickLineProfile(id=-1, abscissa='line', s='-'):
     """abscissa can be
@@ -2215,17 +2170,17 @@ def vLeftClickLineProfile(id=-1, abscissa='line', s='-'):
             ddx = dx/l
             ddy = dy/l
             #print dx,dy,l, x0,y0,x1,y1
-            xs = map(int, N.arange(x0, x1, ddx)+.5)
-            ys = map(int, N.arange(y0, y1, ddy)+.5)
+            xs = list(map(int, N.arange(x0, x1, ddx)+.5))
+            ys = list(map(int, N.arange(y0, y1, ddy)+.5))
             #print len(xs), len(ys)
             try:
                 vs = v.img[ ys,xs ]
                 if abscissa == 'x':
-                    plotxy(xs, vs, s)
+                    plotxy(xs, vs, s)#symbolSize=0)#s)
                 elif abscissa == 'y':
-                    plotxy(ys, vs, s)
+                    plotxy(ys, vs, s)#symbolSize=0)#s)
                 else:
-                    ploty(vs, s)
+                    ploty(vs, s)#symbolSize=0)#s)
             except:
                 raise #print "line profile bug:", len(xs), len(ys)
 
@@ -2238,9 +2193,47 @@ def vLeftClickLineProfile(id=-1, abscissa='line', s='-'):
     vLeftClickDoes(id, callGlFn=fg, callFn=f)
 
 
+def vReplicateLineProfile(id0=-2, id1=-1, abscissa='line', s='+-', hold=1):
+    """
+    Plot the line profiles from one viewer (id0) to another (id1)
 
+    abscissa can be
+    'x'       to plot intensity along line against x-coordinate
+    'y'       against y-coord
+    else      against length
 
+    s: simbol of Y.plot
+    """
+    v = viewers[id0]
+    poly = v.poly
+    
+    v = viewers[id1]
+    
+    def f(poly, v):
 
+        x0,y0,x1,y1 = poly
+        dx,dy = x1-x0, y1-y0
+
+        l = N.sqrt(dx*dx + dy*dy)
+        if l>1:
+            ddx = dx/l
+            ddy = dy/l
+            #print dx,dy,l, x0,y0,x1,y1
+            xs = list(map(int, N.arange(x0, x1, ddx)+.5))
+            ys = list(map(int, N.arange(y0, y1, ddy)+.5))
+            #print len(xs), len(ys)
+            try:
+                vs = v.img[ ys,xs ]
+                if abscissa == 'x':
+                    plotxy(xs, vs, s, hold=hold)
+                elif abscissa == 'y':
+                    plotxy(ys, vs, s, hold=hold)
+                else:
+                    ploty(vs, s, hold=hold)
+            except:
+                raise #print "line profile bug:", len(xs), len(ys)
+
+    f(poly, v)
 
 
 def vLeftClickLineMeasure(id=-1, roundCoords2int=False):
@@ -2257,7 +2250,7 @@ def vLeftClickLineMeasure(id=-1, roundCoords2int=False):
         dx,dy = x1-x0, y1-y0
 
         s = "length: %s" % (N.sqrt(dx*dx+dy*dy), )
-        print s
+        print(s)
         v.viewer.SetToolTipString(s)
         
     def fg(x,y):
@@ -2293,7 +2286,7 @@ def vLeftClickTriangleMeasure(id=-1, roundCoords2int=0):
                                 )
 
             px,py = x0+dx21/2.  ,  y0+dy21/2.
-            poLen = N.sqrt(1-b2/(4*R*R)) * R
+            poLen = N.sqrt(1-b2/4*R*R) * R
 
             #nnx     = dx21
             #cx,cy 
@@ -2324,7 +2317,7 @@ def vLeftClickTriangleMeasure(id=-1, roundCoords2int=0):
                 s= "outerCircle=> cx,cy: %.1f %.1f   r: %.1f  diameter: %.1f" %       (xxc,yyc, R, 2*R)
             else:
                 s= "outerCircle=> area: %.2f" % (area,)
-            print s
+            print(s)
             v.viewer.SetToolTipString(s)
         except ZeroDivisionError:
             pass
@@ -2436,7 +2429,7 @@ def vLeftViewSubRegion(id=-1, color=False, gfxWhenDone='hide'):
 
 
 
-def vLeftClickDoes(id=-1, callGlFn=None, callFn=None, roundCoords2int=True, onlyOnClick=True):
+def vLeftClickDoes(id=-1, callGlFn=None, callFn=None, roundCoords2int=True):
     """
     register left-click handler functions for viewer id
     for v=viewers[id] v.lastLeftClick_atYX  gets set to remember 
@@ -2448,15 +2441,9 @@ def vLeftClickDoes(id=-1, callGlFn=None, callFn=None, roundCoords2int=True, only
 
     if roundCoords2int  coordinates are integers, 
            otherwise float (first pixel is between -.5 .. +.5)
-
-    if onlyOnClick is False, call fct when LeftIsDown,
-         i.e. also while moving when button kept down
     """
     v = viewers[id]
     vv = v.viewer
-
-    if callGlFn is None and callFn is None:
-        return vLeftClickNone(id)
 
     if callGlFn is None:
         def x(x,y):
@@ -2467,7 +2454,6 @@ def vLeftClickDoes(id=-1, callGlFn=None, callFn=None, roundCoords2int=True, only
         if roundCoords2int:
             x = int(round(x))
             y = int(round(y))
-
         #20060726 v.data.x = x
         #20060726 v.data.y = y
         import numpy as N
@@ -2480,15 +2466,7 @@ def vLeftClickDoes(id=-1, callGlFn=None, callFn=None, roundCoords2int=True, only
         vv.updateGlList( ff0)
 
     #20080707 vv.doLDown = fff
-    if onlyOnClick:
-        _registerEventHandler(vv.doOnLDown, newFcn=fff, newFcnName='vLeftClickDoes')
-        _registerEventHandler(vv.doOnMouse, oldFcnName='vLeftClickDoes', delAll=False)
-    else:
-        def fff2(x,y, ev):
-            if ev.m_leftDown:
-                fff(x,y,ev)
-        _registerEventHandler(vv.doOnMouse, newFcn=fff2, newFcnName='vLeftClickDoes')
-        _registerEventHandler(vv.doOnLDown, oldFcnName='vLeftClickDoes', delAll=False)
+    _registerEventHandler(vv.doOnLDown, newFcn=fff, newFcnName='vLeftClickDoes')
 
 def vLeftClickNone(id=-1, delAll=False):
     """
@@ -2505,7 +2483,6 @@ def vLeftClickNone(id=-1, delAll=False):
     #20080707 vv.doLDown = x 
 
     _registerEventHandler(vv.doOnLDown, oldFcnName='vLeftClickDoes', delAll=delAll)
-    _registerEventHandler(vv.doOnMouse, oldFcnName='vLeftClickDoes', delAll=delAll)
 
 
 
@@ -2569,9 +2546,6 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
     if all lists (xyViewers, xzViewers and yzViewers) are empty, 
     reset v_id  to NOT follow mouse cursor
 
-    items in xyViewers can be a scalar "vid", or a tuple "(vid,(factorY,factorX))"
-       the latter, is useful if vid is a zoomed view of (v_id)
-
     TODO: FIXME: cyclic - recursive calls through setslider .... (20080902)
     """
     if not hasattr(xyViewers, '__len__'):
@@ -2601,7 +2575,7 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
             zaxis=None
         zAxisSliders.append(zaxis)
                     
-    xzViewers__zAxisSliders = zip(xzViewers, zAxisSliders)
+    xzViewers__zAxisSliders = list(zip(xzViewers, zAxisSliders))
     del zAxisSliders
 
     zAxisSliders=[]
@@ -2613,7 +2587,7 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
             zaxis=None
         zAxisSliders.append(zaxis)
 
-    yzViewers__zAxisSliders = zip(yzViewers, zAxisSliders)
+    yzViewers__zAxisSliders = list(zip(yzViewers, zAxisSliders))
     del zAxisSliders
 
     def onMouseFollower(x,y, ev):
@@ -2625,89 +2599,65 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
         s=None
         if (followZoomInXYviewers or followZoomInSideviewers) and ev.GetEventObject().m_zoomChanged:
             s,cyx = vZoomGet(v_id, returnCYX=True)
-        
-        doReZoom = s is not None and followZoomInXYviewers
         for vid in xyViewers:
-            try:
-                vid_ = vid
-                vid=vid[0]
-            except TypeError:
-                # vid is a scalar
-                xx,yy = x,y
-                if doReZoom:
-                    cccyx = cyx
-                    sss   = s
-            else: # vid is a tuple: (vid, (sy,sx))
-                sy,sx = vid_[1]
-                xx,yy = x*sx,y*sy
-                if doReZoom:
-                    cccyx = cyx[0]*sy, cyx[1]*sx
-                    sss = s / float(sy) # HACK FIXME - what about sx ?
-            try:
-                v1 = viewers[vid]
-                vv = v1.viewer
-                if ev.Leaving():
-                    vgEnable(vv, idx='vFollowMouse', on=False)
-                else:
-                    if doReZoom:
-                        vZoom(vv, sss,cccyx, refreshNow=False)
-                    vgAddCrosses(vv, [(yy,xx,-10)], color=crossColor, idx='vFollowMouse')
-                    #def ff0():
-                    #    #glCross(x+.5, y+.5, length=10, color=crossColor)
-                    #    glPlus(x+.55555, y+.55555, length=10, color=crossColor)
-                    #vv.updateGlList(ff0, refreshNow=True)
-                    for doOnMouseHandler in vv.doOnMouse:
-                        try:
-                            if doOnMouseHandler.__name__ in ('splitND_onMouse',
-                                                              'splitND2_onMouse'):
-                                doOnMouseHandler(xx,yy,None)
-                        except AttributeError:
-                            pass
-                    
-            except AttributeError: # viewer might have been closed
-                pass
+           try:
+               v1 = viewers[vid]
+               vv = v1.viewer
+               if ev.Leaving():
+                   vgEnable(vv, idx='vFollowMouse', on=False)
+               else:
+                   if s is not None and followZoomInXYviewers:
+                       vZoom(vv, s,cyx, refreshNow=False)
+                   vgAddCrosses(vv, [(y,x,-10)], color=crossColor, idx='vFollowMouse')
+                   #def ff0():
+                   #    #Y.glCross(x+.5, y+.5, length=10, color=crossColor)
+                   #    glPlus(x+.55555, y+.55555, length=10, color=crossColor)
+                   #vv.updateGlList(ff0, refreshNow=True)
+
+           except AttributeError: # viewer might have been closed
+               pass
 
         for vid,zslider in xzViewers__zAxisSliders:
-            try:
-                v1 = viewers[vid]
-                vv = v1.viewer
-                if ev.Leaving():
-                    vgEnable(vv, idx='vFollowMouse', on=False)
-                else:
-                    if s is not None and followZoomInXYviewers:
-                        #s2,cyx2 = vZoomGet(vv, returnCYX=True)
-                        #vZoom(vid, s,(cyx2[0], cyx[1]), refreshNow=False)
-                        vZoom(vid, s,(z, cyx[1]), refreshNow=False)
-                    vgAddCrosses(vv, [(z,x,-10)], color=crossColor, idx='vFollowMouse')
-                    #def ff0():
-                    #    glPlus(x+.55555, z+.55555, length=10, color=crossColor)
-                    #vv.updateGlList(ff0, refreshNow=True)
-                    if zslider is not None and 0<= y < ny:
-                        if y != v1.zsec[zslider]: # having "if" prevents recursive calling
-                            v1.setSlider(y,zslider)
-            except AttributeError: # viewer might have been closed
-                pass
+           try:
+               v1 = viewers[vid]
+               vv = v1.viewer
+               if ev.Leaving():
+                   vgEnable(vv, idx='vFollowMouse', on=False)
+               else:
+                   if s is not None and followZoomInXYviewers:
+                       #s2,cyx2 = vZoomGet(vv, returnCYX=True)
+                       #vZoom(vid, s,(cyx2[0], cyx[1]), refreshNow=False)
+                       vZoom(vid, s,(z, cyx[1]), refreshNow=False)
+                   vgAddCrosses(vv, [(z,x,-10)], color=crossColor, idx='vFollowMouse')
+                   #def ff0():
+                   #    glPlus(x+.55555, z+.55555, length=10, color=crossColor)
+                   #vv.updateGlList(ff0, refreshNow=True)
+                   if zslider is not None and 0<= y < ny:
+                       if y != v1.zsec[zslider]: # having "if" prevents recursive calling
+                           v1.setSlider(y,zslider)
+           except AttributeError: # viewer might have been closed
+               pass
 
         for vid,zslider in yzViewers__zAxisSliders:
-            try:
-                v1 = viewers[vid]
-                vv = v1.viewer
-                if ev.Leaving():
-                    vgEnable(vv, idx='vFollowMouse', on=False)
-                else:
-                    if s is not None and followZoomInXYviewers:
-                        #s2,cyx2 = vZoomGet(vv, returnCYX=True)
-                        #vZoom(vid, s,(cyx2[0], cyx[1]), refreshNow=False)
-                        vZoom(vid, s,(cyx[0], z), refreshNow=False)
-                    vgAddCrosses(vv, [(y,z,-10)], color=crossColor, idx='vFollowMouse')
-                    #def ff0():
-                    #    glPlus(x+.55555, z+.55555, length=10, color=crossColor)
-                    #vv.updateGlList(ff0, refreshNow=True)
-                    if zslider is not None and 0<= x < nx:
-                        if x != v1.zsec[zslider]: # having "if" prevents recursive calling
-                            v1.setSlider(x,zslider)
-            except AttributeError: # viewer might have been closed
-                pass
+           try:
+               v1 = viewers[vid]
+               vv = v1.viewer
+               if ev.Leaving():
+                   vgEnable(vv, idx='vFollowMouse', on=False)
+               else:
+                   if s is not None and followZoomInXYviewers:
+                       #s2,cyx2 = vZoomGet(vv, returnCYX=True)
+                       #vZoom(vid, s,(cyx2[0], cyx[1]), refreshNow=False)
+                       vZoom(vid, s,(cyx[0], z), refreshNow=False)
+                   vgAddCrosses(vv, [(y,z,-10)], color=crossColor, idx='vFollowMouse')
+                   #def ff0():
+                   #    glPlus(x+.55555, z+.55555, length=10, color=crossColor)
+                   #vv.updateGlList(ff0, refreshNow=True)
+                   if zslider is not None and 0<= x < nx:
+                       if x != v1.zsec[zslider]: # having "if" prevents recursive calling
+                           v1.setSlider(x,zslider)
+           except AttributeError: # viewer might have been closed
+               pass
 
         #TODO FIXME - if multiple viewers are "listed" only first one responds fast
         # 200902: COMMENT: was this a problem on XP - seems to work on OS-X
@@ -2728,10 +2678,6 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
             z = v.zsec[zAxis]
             if setSliderInXYviewers:
                 for vid in xyViewers:
-                    try:
-                        vid = vid[0]
-                    except TypeError:
-                        pass
                     v1 = viewers[vid]
                     try:
                         if z != v1.zsec[zAxis]: # having "if" prevents recursive calling
@@ -2764,184 +2710,6 @@ def vFollowMouse(v_id, xyViewers=[], xzViewers=[], yzViewers=[],
         _registerEventHandler(v.doOnSecChanged,     newFcn=doNewSec,  newFcnName='vFollowMouse')
 
     
-_Menu_enableSync = wx.NewId()
-_Menu_SyncDone = wx.NewId()
-
-def _vSync_cleanEnableSyncMenu(id):
-    viewer = viewers[id].viewer
-    for iFirst in range(viewer.m_menu.GetMenuItemCount()):
-        if 'able sync' in viewer.m_menu.FindItemByPosition(iFirst).GetLabel():
-            break
-    else:
-        return
-
-    for i in range(3):
-        viewer.m_menu.RemoveItem(viewer.m_menu.FindItemByPosition(iFirst))
-
-def vSyncViewersReset(vids=[]):
-    """
-    "un-sync" given viewer
-    if vids is empty: un-sync all viewers
-    """
-    from .splitND2 import spv as spv2_class
-
-    if len(vids) ==0:
-        vids = [id for id,v in enumerate(viewers) if v]
-    for id in vids:
-        try:
-            vFollowMouse(id)
-        except AttributeError: # 'NoneType' object has no attribute 'viewer'
-            continue
-        vgRemove(id, "vFollowMouse")
-        _vSync_cleanEnableSyncMenu(id)
-        v = viewers[id]
-        _registerEventHandler(v.viewer.doOnLDClick, oldFcnName ='OnEnableSync')
-        if isinstance(v, spv2_class):
-            for h in v.hist:
-                _registerEventHandler(h.doOnBrace, oldFcnName='sync_HistBrace')
-        else:
-            _registerEventHandler(v.hist.doOnBrace, oldFcnName='sync_HistBrace')
-
-def vSyncViewers(vids=[], color=(0,1,0), syncHist=True, registerDClick=True):
-    """
-    if vids is empty: sync all viewers
-
-    `color`: color of fake mouse cursor in other viewers
-
-    double click in viewer, to temporily deactivate mouse sync
-    or use right-click pop menu, and use menu to stop sync
-
-    registerDClick can be True,False or a list of vids, where to register the dclick
-
-    add to each viewer's right-click popup menu: disable / finish sync
-
-    (this calls Y.vFollowMouse on viewers "reciprocecely" -
-      is decides on XY, XZ, YZ behaviour based on viewer title)
-    """
-    from .splitND2 import spv as spv2_class
-
-    if len(vids) ==0:
-        vids = [id for id,v in enumerate(viewers) if v]
-
-    allXZ = [id for id in vids if 'X-Z' in vTitleGet(id)]
-    allYZ = [id for id in vids if 'Y-Z' in vTitleGet(id)]
-    #allXZ = [id for id in vids if 'X-Z' in  (vTitleGet(id[0]) if hasattr(id, '__contains__') else vTitleGet(id))]
-    #allYZ = [id for id in vids if 'Y-Z' in  (vTitleGet(id[0]) if hasattr(id, '__contains__') else vTitleGet(id))]
-    allXY = [id for id in vids if id not in (allXZ+ allYZ)]
-
-    def _registerSync_off():
-        for id in vids:
-            vFollowMouse(id)
-            #vgNameRemove(id, "vFollowMouse")
-
-    def _registerSync_on():
-        for id in vids:
-            zAxis = 0 if len(vGetZSecTuple(id)) else None # FIXME HACK
-            if id in allXY:
-                #print ('XY', id, #
-                vFollowMouse(id, 
-                               filter(lambda x:x != id, allXY),
-                               [] if zAxis is None else filter(lambda x:x != id, allXZ),
-                               [] if zAxis is None else filter(lambda x:x != id, allYZ),
-                               zAxis, crossColor=color,
-                               )
-            elif id in allXZ:
-                #print ('XZ', id, #
-                vFollowMouse(id, 
-                               [] if zAxis is None else filter(lambda x:x != id, allXZ),
-                               filter(lambda x:x != id, allXY),
-                               [],
-                               zAxis, crossColor=color,
-                               )
-            elif id in allYZ:
-                #print ('YZ', id, #
-                vFollowMouse(id, 
-                               [],
-                               [] if zAxis is None else filter(lambda x:x != id, allYZ),
-                               filter(lambda x:x != id, allXY),
-                               zAxis, crossColor=color,
-                               )
-    def _setup_SyncMenu_and_doubleClick():
-        for id in vids:
-            _vSync_cleanEnableSyncMenu(id)
-            vv = viewers[id].viewer
-            vv.m_menu.Insert(0, _Menu_enableSync, "en-/dis-able sync")
-            vv.m_menu.Insert(1, _Menu_SyncDone, "sync done")
-            vv.m_menu.InsertSeparator(2)
-            vv.Bind(wx.EVT_MENU, OnEnableSync, id=_Menu_enableSync)
-            vv.Bind(wx.EVT_MENU, OnSyncDone, id=_Menu_SyncDone)
-            if hasattr(registerDClick, '__contains__') and id in registerDClick or registerDClick:
-                _registerEventHandler(vv.doOnLDClick, newFcn=OnEnableSync)
-            else:
-                _registerEventHandler(vv.doOnLDClick, oldFcnName='OnEnableSync')
-
-
-    def onHistBrace(s):
-        l,r = s.leftBrace,s.rightBrace
-        for id in vids:
-            v = viewers[id]
-            if v: # viewer might have be closed in the mean time
-                if isinstance(v, spv2_class):
-                    pass # FIXME
-                else:
-                    if vHistScaleGet(id) != (l,r): # having "if" prevents recursive calling
-                        vHistScale(id, l,r, autoscale=False)
-            '''
-            # we do this by hand, to prevent recursive calling of onHistBrace()
-
-            vh= viewers[id].hist
-            vh.leftBrace,vh.rightBrace = l,r
-            vh.Refresh()
-            for f in vh.doOnBrace:
-                if 'sync_HistBrace' != f.__name__: 
-                    f(vh)
-            '''
-    def _registerHistBraceSync_off():
-        for id in vids:
-            v=viewers[id]
-            if isinstance(v, spv2_class):
-                for h in v.hist:
-                    _registerEventHandler(h.doOnBrace, 
-                                            oldFcnName='sync_HistBrace')
-            else:
-                _registerEventHandler(v.hist.doOnBrace, 
-                                        oldFcnName='sync_HistBrace')
-    def _registerHistBraceSync_on():
-        for id in vids:
-            v=viewers[id]
-            if isinstance(v, spv2_class):
-                for h in v.hist:
-                    _registerEventHandler(h.doOnBrace, onHistBrace, 
-                                            newFcnName='sync_HistBrace')
-            else:
-                _registerEventHandler(v.hist.doOnBrace, onHistBrace, 
-                                        newFcnName='sync_HistBrace')
-
-
-    def OnSyncDone(*args):
-        vSyncViewersReset(vids)
-    def OnEnableSync(*args):
-        wx.Bell()
-        
-        if 'vFollowMouse' in [f.__name__ for f in viewers[vids[0]].viewer.doOnMouse]:
-            _registerSync_off()
-            #_registerHistBraceSync_off()
-        else:
-            _registerSync_on()
-            #_registerHistBraceSync_on()
-        #global w
-        #w = ev.GetEventObject()
-        #print ev, ev.GetEventObject()
-        #print vids
-
-    _setup_SyncMenu_and_doubleClick()
-    _registerSync_on()
-    if syncHist:
-        _registerHistBraceSync_on()
-    else:
-        _registerHistBraceSync_off()
-
-
 def vgMarkIn3D(v_id=-1, zyx = (None,200,200), kind='Cross', 
                s=4,
                zPlusMinus=9999,
@@ -2967,7 +2735,7 @@ def vgMarkIn3D(v_id=-1, zyx = (None,200,200), kind='Cross',
     zPlusMinus - how many sections above/below z should be marked (at most)
     """
     v = viewers[v_id]
-    
+        
     nz = v.zshape[0]
 
     z,y,x = zyx
@@ -2993,16 +2761,23 @@ def vgMarkIn3D(v_id=-1, zyx = (None,200,200), kind='Cross',
     z1 = z+zPlusMinus
     if z1>nz:
         z1 = nz
+
+    ids = []
     for i in range(z0,z):
         q=fffff(v_id, [yx], s, color=colLessZ, width=widthLessZ, 
                 name=["markedIn3D", name,(i,)], idx=None, enable=i==zShown, refreshNow=False)
+        ids.append(q)
 
     for i in range(z+1,z1):
         q=fffff(v_id, [yx], s, color=colMoreZ, width=widthMoreZ, 
                 name=["markedIn3D", name,(i,)], idx=None, enable=i==zShown, refreshNow=False)
+        ids.append(q)
         
     q=fffff(v_id, [yx], s, color=colAtZ, width=widthAtZ, 
             name=["markedIn3D", name,(z,)], idx=None, enable=z==zShown, refreshNow=refreshNow)
+    ids.append(q)
+
+    return ids
 
 
 
@@ -3022,8 +2797,8 @@ def vmScale(id, zscale):
     return viewers[id].m.setZScale(zscale)
 
 
-
-from OpenGL import GL
+if _wx:
+    from OpenGL import GL
 # def glTex2Don():
 #   pass# #20050520 GL.glEnable( GL.GL_TEXTURE_2D)
 # def glTex2Doff():
@@ -3073,7 +2848,7 @@ def glBox(x0,y0,x1,y1, color=None):
     GL.glEnd()
 
 try:
-    from Priithon_bin.glSeb import glCircle_seb
+    from glSeb import glCircle_seb
     def glCircle(x0,y0,r=10, nEdges=60, color=None):
         if color is not None:
             GL.glColor( color )
@@ -3083,15 +2858,15 @@ except ImportError:
         if color is not None:
             GL.glColor( color )
 
-        ps = map(lambda a: (x0+r*N.cos(a),
-                       y0+r*N.sin(a)), N.arange(0,2*N.pi, 2*N.pi/nEdges))
+        ps = [(x0+r*N.cos(a),
+                       y0+r*N.sin(a)) for a in N.arange(0,2*N.pi, 2*N.pi/nEdges)]
         GL.glBegin( GL.GL_LINE_LOOP )
         for x,y in ps:
             GL.glVertex2f( x,y )
         GL.glEnd()
 
 try:
-    from Priithon_bin.glSeb import glEllipse_seb
+    from glSeb import glEllipse_seb
     def glEllipse(x0,y0,rx=10, ry=5, phi=0, nEdges=60, color=None):
         if color is not None:
             GL.glColor( color )
@@ -3100,8 +2875,8 @@ except ImportError:
     def glEllipse(x0,y0,rx=10, ry=5, phi=0, nEdges=60, color=None):
         if color is not None:
             GL.glColor( color )
-        ps = map(lambda a: (x0+rx*N.cos(a),
-                       y0+ry*N.sin(a)), N.arange(phi,phi+2*N.pi, 2*N.pi/nEdges))
+        ps = [(x0+rx*N.cos(a),
+                       y0+ry*N.sin(a)) for a in N.arange(phi,phi+2*N.pi, 2*N.pi/nEdges)]
         GL.glBegin( GL.GL_LINE_LOOP )
         for x,y in ps:
             GL.glVertex2f( x,y )
@@ -3137,6 +2912,8 @@ def glutText(str, posXYZ=None, size=None, mono=0, color=None, enableLineSmooth=F
     #         33.33  units. Each character is 104.76 units wide.
     """
     from OpenGL import GLUT
+    stroke = {0: GLUT.GLUT_STROKE_ROMAN,
+              1: GLUT.GLUT_STROKE_MONO_ROMAN}
     if posXYZ is not None:
         try:
             x,y,z = posXYZ
@@ -3158,9 +2935,13 @@ def glutText(str, posXYZ=None, size=None, mono=0, color=None, enableLineSmooth=F
             GL.glScale(size[0],size[1],1)
         else:
             GL.glScale(size[0],size[1],size[2])
-            
+
     for letter in str:
-        GLUT.glutStrokeCharacter(mono, ord(letter))
+        try:
+            strk = stroke[mono]
+        except TypeError: # unhashable
+            strk = mono
+        GLUT.glutStrokeCharacter(strk, ord(letter))
     GL.glPopMatrix()
     if enableLineSmooth:
         GL.glDisable(GL.GL_LINE_SMOOTH)
@@ -3170,7 +2951,8 @@ def crust(showLinesNumbers=True, wrapLongLines=True):
     this combines a shell with an inspect panel (and more)
     """
     #20070715 from wx import py
-    from . import py # from Priithon
+    #import py # from Priithon
+    from wx import py
     f = py.crust.CrustFrame()
     #20070715(this somehow disappeared from editwindow.py) f.shell.setDisplayLineNumbers(showLinesNumbers)
     f.shell.wrap(wrapLongLines)
@@ -3182,7 +2964,8 @@ def shell(showLinesNumbers=True, wrapLongLines=True, clone=False):
     if clone: new shell will be another (linked) "view" of main shell window
     """
     #20070715 from wx import py
-    from . import py # from Priithon
+    #import py # from Priithon
+    from wx import py
 
     title = "Priithon shell"
     if clone:
@@ -3204,9 +2987,10 @@ def inspect(what=None):
     this is what you want to investigate all the variables, modules,
     and more
     
-    if what is None: defaults to `locals()` in `__main__` (i.e. `__main__.__dict__`)
+    if what is None: defautls to `locals()` in `__main__` (i.e. `__main__.__dict__`)
     """
-    from . import py # from Priithon
+    #import py # from Priithon
+    from wx import py
 
     if what is None:
         import __main__
@@ -3239,24 +3023,6 @@ def inspect(what=None):
                             static=False)
     c.Show(1)
     
-def shellExec(command, addHistory=True, useLocals=True):
-    """
-    to emulate a command beeing typed into the Priithon shell,
-    exec `command` in __main__.__dict__
-    and, if `addHistory` is True
-     inject `command` into Priithon shell history
-
-    if `useLocals` uses callers local name space in addition to __main__ globals
-    """
-    import __main__
-    __main__.shell.addHistory(command)
-    if useLocals:
-        import sys
-        exec command in __main__.__dict__, sys._getframe(1).f_locals
-    else:
-        exec command in __main__.__dict__
-
-
 
 def shellMessage(msg):
     """
@@ -3270,7 +3036,7 @@ def shellMessage(msg):
         __main__.shell.promptPosStart += len(msg)
         __main__.shell.promptPosEnd += len(msg)
     except:
-        print msg ,# in case there is no main.shell
+        print(msg, end=' ')# in case there is no main.shell
 
 def shellMenuAppendNewCommand(cmd, menuText="new command", menuCtrlKey='D', menu=0, bell=True, execModule=None):
     """
@@ -3332,7 +3098,7 @@ def shellMenuAppendNewCommand(cmd, menuText="new command", menuCtrlKey='D', menu
         if callable(cmd):
             cmd()
         else:
-            exec cmd in execModule.__dict__ # , {'x':ev.GetString(), '_':self.execModule}        
+            exec(cmd, execModule.__dict__) # , {'x':ev.GetString(), '_':self.execModule}        
 
     frame.Bind(wx.EVT_MENU, onAS, id=eid)
 
@@ -3385,7 +3151,7 @@ def clipboardGetText():
 
     do = wx.TextDataObject()
     if not wx.TheClipboard.Open():
-        raise RuntimeError, "cannot open clipboard"
+        raise RuntimeError("cannot open clipboard")
     try:
         success = wx.TheClipboard.GetData(do)
     finally:
@@ -3407,7 +3173,7 @@ def clipboardSetText(obj, useRepr=False):
     do = wx.TextDataObject()
     do.SetText(obj)
     if not wx.TheClipboard.Open():
-        raise RuntimeError, "cannot open clipboard"
+        raise RuntimeError("cannot open clipboard")
     try:
         wx.TheClipboard.SetData(do)
     finally:
@@ -3419,10 +3185,10 @@ def clipboardImageSaveToFile(fn=None):
     if fn is None: uses FN()
     """
     if not wx.TheClipboard.Open():
-        raise RuntimeError, "cannot open clipboard"
+        raise RuntimeError("cannot open clipboard")
     try:
         if not wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_BITMAP)):
-            raise RuntimeError, "no bitmap in clipboard"
+            raise RuntimeError("no bitmap in clipboard")
 
         if fn is None:
             fn = FN(save=1)
@@ -3444,14 +3210,14 @@ def clipboardImageSaveToFile(fn=None):
         elif fn[-4:].lower() == '.gif':
             typ = wx.BITMAP_TYPE_GIF
         else:
-            raise ValueError, "Unknow file extention"
+            raise ValueError("Unknow file extention")
 
         bmp.SaveFile(fn, typ) #, wx.BITMAP_TYPE_PNG
     finally:
         wx.TheClipboard.Close()
 
 
-def clipboardGetText2array(transpose=False, comment='#', sep=None, convFcn = None, skipNlines=0, convertDecimalKomma=False):
+def clipboardGetText2array(transpose=False, comment='#', sep=None, convFcn = None, convertDecimalKomma=False):
     """
     Return an array containing the data currently as text in the clipboard. This
     function works for arbitrary data types (every array element can be
@@ -3474,124 +3240,123 @@ def clipboardGetText2array(transpose=False, comment='#', sep=None, convFcn = Non
     txt = clipboardGetText()
     from . import useful as U
     return U.text2array(txt, transpose=transpose, comment=comment, sep=sep, 
-                        convFcn = convFcn, skipNlines=skipNlines, 
-                        convertDecimalKomma=convertDecimalKomma)
+                        convFcn = convFcn, convertDecimalKomma=convertDecimalKomma)
 
 try:
- def vtkInit():
-    import sys
+    def vtkInit():
+        import sys
 
-    p1 = '/jws18/haase/VTK-4.2-20040703/VTK/Wrapping/Python'
-    p2 = '/jws18/haase/VTK-4.2-20040703/VTK/bin'
-    if not p1 in sys.path:
-        sys.path.append(p1)
-        sys.path.append(p2)
+        p1 = '/jws18/haase/VTK-4.2-20040703/VTK/Wrapping/Python'
+        p2 = '/jws18/haase/VTK-4.2-20040703/VTK/bin'
+        if not p1 in sys.path:
+            sys.path.append(p1)
+            sys.path.append(p2)
 
- def vtkWxDemoCone(resolution=8):
-    vtkInit()
-        
-    import wx, vtkpython
+    def vtkWxDemoCone(resolution=8):
+        vtkInit()
 
-    #A simple VTK widget for wxPython.  Note that wxPython comes
-    #with its own wxVTKRenderWindow in wxPython.lib.vtk.  Try both
-    #and see which one works better for you.
-    from vtk.wx.wxVTKRenderWindow import wxVTKRenderWindow
+        import wx, vtkpython
 
-
-    # create the widget
-    frame = wx.Frame(None, -1, "wxRenderWindow", size=wx.Size(400,400))
-    widget = wxVTKRenderWindow(frame, -1)
-    
-    ren = vtkpython.vtkRenderer()
-    widget.GetRenderWindow().AddRenderer(ren)
-
-    cone = vtkpython.vtkConeSource()
-    cone.SetResolution( resolution )
-    
-    coneMapper = vtkpython.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
-    
-    coneActor = vtkpython.vtkActor()
-    coneActor.SetMapper(coneMapper)
-
-    ren.AddActor(coneActor)
-
-    # show the window
-    
-    frame.Show(1)
-
- class vtkMountain:
-    
-    def __init__(self, arr2d, title="wxRenderWindow"):
-        self.arr2d = arr2d
-
-
-        try:
-            import vtk
-        except:
-            vtkInit()
-            import vtk
-            
-
-        #from vtk.wx.wxVTKRenderWindow import wxVTKRenderWindow
-        #from vtk import vtkImageImport
-
-        #global f, w, ren, ii, h,w, mi,ma,  geom,warp, mapper, carpet, _vtktypedict 
-
-        self._vtktypedict = {N.uint8:vtk.VTK_UNSIGNED_CHAR,
-                        N.uint16:vtk.VTK_UNSIGNED_SHORT,
-                        N.uint32:vtk.VTK_UNSIGNED_INT,
-                        N.int8:vtk.VTK_CHAR,
-                        N.int16:vtk.VTK_SHORT,
-                        N.int32:vtk.VTK_INT,
-                        #N.int32:vtk.VTK_LONG,
-                        #N.uint8:vtk.VTK_FLOAT,
-                        #N.uint8:vtk.VTK_DOUBLE,
-                        N.float32:vtk.VTK_FLOAT,
-                        N.float64:vtk.VTK_DOUBLE }
-
-
-
+        #A simple VTK widget for wxPython.  Note that wxPython comes
+        #with its own wxVTKRenderWindow in wxPython.lib.vtk.  Try both
+        #and see which one works better for you.
         from vtk.wx.wxVTKRenderWindow import wxVTKRenderWindow
-        from vtk import vtkImageImport
 
-        self.f = wx.Frame(None, -1, title, size=wx.Size(400,400))
-        self.w = wxVTKRenderWindow(self.f, -1)
-        self.ren = vtk.vtkRenderer()
-        self.w.GetRenderWindow().AddRenderer(self.ren)
 
-        self.ii = vtkImageImport()
+        # create the widget
+        frame = wx.Frame(None, -1, "wxRenderWindow", size=wx.Size(400,400))
+        widget = wxVTKRenderWindow(frame, -1)
 
-        #size = len(a.flat)  * a.itemsize()
-        #ii.SetImportVoidPointer(a.flat, size)
-        ####use tostring instead    self.ii.SetImportVoidPointer(arr2d._data, len(arr2d._data))
-        self.ii.SetImportVoidPointer(arr2d._data, len(arr2d._data))
-        self.ii.SetDataScalarType( self._vtktypedict[arr2d.dtype]) 
+        ren = vtkpython.vtkRenderer()
+        widget.GetRenderWindow().AddRenderer(ren)
+
+        cone = vtkpython.vtkConeSource()
+        cone.SetResolution( resolution )
+
+        coneMapper = vtkpython.vtkPolyDataMapper()
+        coneMapper.SetInput(cone.GetOutput())
+
+        coneActor = vtkpython.vtkActor()
+        coneActor.SetMapper(coneMapper)
+
+        ren.AddActor(coneActor)
+
+        # show the window
+
+        frame.Show(1)
+
+    class vtkMountain:
     
-        h,w = arr2d.shape[-2:]
-        self.ii.SetDataExtent (0,w-1, 0,h-1, 0,0)
-        self.ii.SetWholeExtent(0,w-1, 0,h-1, 0,0)
-        from . import useful as U
-        self.mi,self.ma = U.mm( arr2d )
-        
-        
-        self.geom = vtk.vtkImageDataGeometryFilter()
-        self.geom.SetInput(self.ii.GetOutput())
-        self.warp = vtk.vtkWarpScalar()
-        self.warp.SetInput(self.geom.GetOutput())
-        self.mapper = vtk.vtkPolyDataMapper()
-        self.mapper.SetInput(self.warp.GetPolyDataOutput())
-        self.carpet = vtk.vtkActor()
-        self.carpet.SetMapper(self.mapper)
-        self.carpet.SetScale(1,1, 50)
+        def __init__(self, arr2d, title="wxRenderWindow"):
+            self.arr2d = arr2d
 
-        
-        self.mapper.SetScalarRange(self.mi,self.ma)
-        self.ren.AddActor(self.carpet)
-    
-    def setZScale(self, zscale):
-        self.carpet.SetScale(1,1, zscale)
-        self.w.Refresh()
+
+            try:
+                import vtk
+            except:
+                vtkInit()
+                import vtk
+
+
+            #from vtk.wx.wxVTKRenderWindow import wxVTKRenderWindow
+            #from vtk import vtkImageImport
+
+            #global f, w, ren, ii, h,w, mi,ma,  geom,warp, mapper, carpet, _vtktypedict 
+
+            self._vtktypedict = {N.uint8:vtk.VTK_UNSIGNED_CHAR,
+                            N.uint16:vtk.VTK_UNSIGNED_SHORT,
+                            N.uint32:vtk.VTK_UNSIGNED_INT,
+                            N.int8:vtk.VTK_CHAR,
+                            N.int16:vtk.VTK_SHORT,
+                            N.int32:vtk.VTK_INT,
+                            #N.int32:vtk.VTK_LONG,
+                            #N.uint8:vtk.VTK_FLOAT,
+                            #N.uint8:vtk.VTK_DOUBLE,
+                            N.float32:vtk.VTK_FLOAT,
+                            N.float64:vtk.VTK_DOUBLE }
+
+
+
+            from vtk.wx.wxVTKRenderWindow import wxVTKRenderWindow
+            from vtk import vtkImageImport
+
+            self.f = wx.Frame(None, -1, title, size=wx.Size(400,400))
+            self.w = wxVTKRenderWindow(self.f, -1)
+            self.ren = vtk.vtkRenderer()
+            self.w.GetRenderWindow().AddRenderer(self.ren)
+
+            self.ii = vtkImageImport()
+
+            #size = len(a.flat)  * a.itemsize()
+            #ii.SetImportVoidPointer(a.flat, size)
+            ####use tostring instead    self.ii.SetImportVoidPointer(arr2d._data, len(arr2d._data))
+            self.ii.SetImportVoidPointer(arr2d._data, len(arr2d._data))
+            self.ii.SetDataScalarType( self._vtktypedict[arr2d.dtype]) 
+
+            h,w = arr2d.shape[-2:]
+            self.ii.SetDataExtent (0,w-1, 0,h-1, 0,0)
+            self.ii.SetWholeExtent(0,w-1, 0,h-1, 0,0)
+            from . import useful as U
+            self.mi,self.ma = U.mm( arr2d )
+
+
+            self.geom = vtk.vtkImageDataGeometryFilter()
+            self.geom.SetInput(self.ii.GetOutput())
+            self.warp = vtk.vtkWarpScalar()
+            self.warp.SetInput(self.geom.GetOutput())
+            self.mapper = vtk.vtkPolyDataMapper()
+            self.mapper.SetInput(self.warp.GetPolyDataOutput())
+            self.carpet = vtk.vtkActor()
+            self.carpet.SetMapper(self.mapper)
+            self.carpet.SetScale(1,1, 50)
+
+
+            self.mapper.SetScalarRange(self.mi,self.ma)
+            self.ren.AddActor(self.carpet)
+
+        def setZScale(self, zscale):
+            self.carpet.SetScale(1,1, zscale)
+            self.w.Refresh()
         
 except:
     import sys
@@ -3599,7 +3364,7 @@ except:
     exc_info = sys.exc_info()
     #import traceback
     #traceback.print_exc()
-    print "* no VTK *"
+    print("* no VTK *")
     pass
 
 
@@ -3651,7 +3416,7 @@ except:
 #         return v.newGLListDone(enable, refreshNow)
 
 def _define_vgAddXXX(addWhat, extraArgs, extraDoc, extraCode):
-    exec '''
+    exec('''
 def vgAdd%(addWhat)s  (id, %(extraArgs)s 
                        color=PriConfig.defaultGfxColor, width=1, name=None, idx=None, enable=True, refreshNow=True):
     """
@@ -3681,7 +3446,7 @@ def vgAdd%(addWhat)s  (id, %(extraArgs)s
            traceback.print_exc() #limit=None, file=None)
     else:
         return v.newGLListDone(enable, refreshNow)
-''' % locals() in globals()
+''' % locals(), globals())
 
 # vgAddBoxes
 # vgAddCircles
@@ -3696,7 +3461,7 @@ def vgAdd%(addWhat)s  (id, %(extraArgs)s
 # vgAddTexts
 
 
-_define_vgAddXXX('Crosses',  # def 
+_define_vgAddXXX('Crosses', 
                  extraArgs='ps, l=4,',
                  extraDoc='''ps is a point list of Y-X tuples  OR
        an entry might contain a third value used as l for that point
@@ -3714,7 +3479,7 @@ _define_vgAddXXX('Crosses',  # def
                 glCross(x,y, ll)
 ''')
 
-_define_vgAddXXX('Boxes',  # def 
+_define_vgAddXXX('Boxes', 
                  extraArgs='ps, l=4,',
                  extraDoc='''ps is a point list of Y-X tuples  OR
        an entry might contain a third value used as l for that point
@@ -3729,7 +3494,7 @@ _define_vgAddXXX('Boxes',  # def
                 ll_2 =l
             glBox(x-ll_2,y-ll_2, x+ll_2,y+ll_2)
 ''')
-_define_vgAddXXX('Circles',  # def 
+_define_vgAddXXX('Circles', 
                  extraArgs='ps, r=4, nEdges=20,',
                  extraDoc='''    ps is a point list of Y-X tuples  (circle centers) OR
        an entry might contain a third value used as r for that point
@@ -3743,7 +3508,7 @@ _define_vgAddXXX('Circles',  # def
                 rr=r
             glCircle(x,y, r, nEdges)
 ''')
-_define_vgAddXXX('Ellipses',  # def 
+_define_vgAddXXX('Ellipses', 
                  extraArgs='ps, nEdges=20,',
                  extraDoc='''    ps is a point list of tuples (circle centers, radius)
 Y-X-R  or Y-X-RY-RX or Y-X-RY-RX-PHI
@@ -3761,7 +3526,7 @@ Y-X-R  or Y-X-RY-RX or Y-X-RY-RX-PHI
                 phi=0
             glEllipse(x,y, rx, ry, phi, nEdges=nEdges)
 ''')
-_define_vgAddXXX('Arrows',  # def 
+_define_vgAddXXX('Arrows', 
                  extraArgs='ps, qs, factor=1,',
                  extraDoc='''    ps is a point list of Y-X tuples
     qs is a point list of Y-X tuples
@@ -3773,7 +3538,7 @@ _define_vgAddXXX('Arrows',  # def
             dyx = b-yx0
             glLineYxDyx(yx0, dyx*factor)
 ''')
-_define_vgAddXXX('ArrowsDelta',  # def 
+_define_vgAddXXX('ArrowsDelta', 
                  extraArgs='ps, ds, factor=1,',
                  extraDoc='''    ps is a point list of Y-X tuples
     ds is a point list of delta Y-X tuples
@@ -3784,7 +3549,7 @@ _define_vgAddXXX('ArrowsDelta',  # def
                  extraCode='''for yx0,dyx in zip(ps,ds):
             glLineYxDyx(yx0, dyx*factor)
 ''')
-_define_vgAddXXX('LineStrip',  # def 
+_define_vgAddXXX('LineStrip', 
                  extraArgs='ps, ',
                  extraDoc='''    ps is a point list of Y-X tuples
     lines are being drawn connecting all points in as from the first to
@@ -3795,11 +3560,10 @@ _define_vgAddXXX('LineStrip',  # def
             GL.glVertex2f( yx[1],yx[0] )
         GL.glEnd()
 ''')
-_define_vgAddXXX('Lines',  # def 
-                 extraArgs='ps, ltype=1, segcols=None, segcolflat=True, ',
+_define_vgAddXXX('Lines', 
+                 extraArgs='ps, ltype=1, ',
                  extraDoc='''    ps is a point list of Y-X tuples
-    (in general) lines are being drawn connecting all points in ps;
-    more specificly is the way of how to connect the dots given by ltype;
+    lines are being drawn connecting all points in ps; 
        the ltypes are:
        >>> GL.GL_LINES       #  o--o o--o ...
        1
@@ -3810,47 +3574,11 @@ _define_vgAddXXX('Lines',  # def
        >>> GL.GL_POINTS      #  .  .  .  .
        0
        >>> GL.GL_POLYGON     #  like loop, but filled
-       9
-   if segcols is not None:
-      segCols[i] is used to color line segment [i] (and following)
-
-      if segcolflat:
-         segments have uniform color of folowing vertex, 
-            otherwise colors are interpolated
+       9       
  ''',
-#20090930
-# timing: 1e6 random points onto 512x512 image
-#   before:          0.66 sec
-#   adding enumerate 0.73 sec
-#   try & fail on segcols being None:
-#                    2.74 sec
-#
-#   if segcols is not None, inside loop:
-#                    0.79 sec
-#   removing enumerate for segcols=None case
-#   segcols=F.zeroArrF(1000000, 3);segcols[:] = (0,0,1)
-#                    4.86 sec
-#   segcols={};
-#                    2.44 sec
-#   segcols[500000] = (0,0,1) (or setting 10 such entries)
-#                    2.62 sec
-#
-                 extraCode='''
-        if segcols is not None:
-            # GL.glGetInteger(GL.GL_SHADE_MODEL) could be done here
-            GL.glShadeModel(GL.GL_FLAT  if segcolflat else  GL.GL_SMOOTH)
-
-        GL.glBegin(ltype);
-        if segcols is None:
-            for yx in ps:
-                GL.glVertex2f( yx[1],yx[0] )
-        else:
-            for i,yx in enumerate(ps):
-                try:
-                   GL.glColor( segcols[i] )
-                except KeyError:
-                   pass
-                GL.glVertex2f( yx[1],yx[0] )
+                 extraCode='''GL.glBegin(ltype);
+        for yx in ps:
+            GL.glVertex2f( yx[1],yx[0] )
         GL.glEnd()
 ''')
 
@@ -3872,21 +3600,21 @@ _rectCode='''
         GL.glVertex2f( x0,y1 )
         GL.glEnd()
 '''
-_define_vgAddXXX('RectFilled',  # def 
+_define_vgAddXXX('RectFilled', 
                  extraArgs='ps, enclose=False, ',
                  extraDoc='''    ps is a pair of Y-X tuples
     if enclose: boxes are enlarged by .5 in each direction(CHECK!)
  ''',
                  extraCode='''GL.glBegin(GL.GL_POLYGON);'''+_rectCode
 )
-_define_vgAddXXX('Rect',  # def 
+_define_vgAddXXX('Rect', 
                  extraArgs='ps, enclose=False, ',
                  extraDoc='''    ps is a pair of Y-X tuples
     if enclose: boxes are enlarged by .5 in each direction(CHECK!)
  ''',
                  extraCode='''GL.glBegin(GL.GL_LINE_LOOP);'''+_rectCode
 )
-_define_vgAddXXX('Texts',  # def 
+_define_vgAddXXX('Texts', 
                  extraArgs='ps, size=.1, mono=False, enumLabel=None, ',
                  extraDoc='''    ps is a point list of Y-X-text tuples (if enumLabel is None)
     size, mono is for Y.glutText
@@ -3999,7 +3727,7 @@ def vgEnabled(id=-1, idx=-1):
     else:
         v=id
 
-    if isinstance(idx, basestring):
+    if isinstance(idx, six.string_types):
         idx=v.m_moreGlLists_NamedIdx[idx]
     return v.m_moreGlLists_enabled[idx]
 
@@ -4074,7 +3802,7 @@ def vgNameToggle(id=-1, name='', on=None):
     
     vgNameBlacklist(id, name, add=not on)
     if on:
-        nameGoesWithSectTuples = any((isinstance(k,tuple) for k in vv.m_moreGlLists_dict.keys() if vv.m_moreGlLists_dict[name][0] in vv.m_moreGlLists_dict[k]))
+        nameGoesWithSectTuples = any((isinstance(k,tuple) for k in list(vv.m_moreGlLists_dict.keys()) if vv.m_moreGlLists_dict[name][0] in vv.m_moreGlLists_dict[k]))
         if nameGoesWithSectTuples:
             # trigger redraw of all gfxs in current section, instead of all gfxs having "name" (which would be accross many z-sections)
             name = vGetZSecTuple(id)
@@ -4089,44 +3817,21 @@ def vgNameEnablerGUIbox(id=-1):
 
     (this is implemented with the help of vgNameBlacklist 
      to overwrite auto on/off when changing z-sections)
-
-    use right-click to refresh list of GFX names 
     """
     if id < 0:
         id += len(viewers)
 
     import sys
-    
-    bbi = len(buttonBoxes) # index of buttonbox
-    def onRBB(ev):
-        bb= buttonBoxes[bbi]
-        bb.frame.DestroyChildren()
-        doBB(bb.frame)
-        bbNew = buttonBoxes.pop() # forget ...
-        bbNew.i = bbi
-        buttonBoxes[bbi] = bbNew #  ... old button box
-        wx.Bell()
-
-    def doBB(panel=None):
-        buttonBox(
-            [
+    buttonBox(
+        [
             ("tb x.SetValue(0==len(viewers[%d].viewer.m_moreGlLists_nameBlacklist.intersection( viewers[%d].viewer.m_moreGlLists_dict['%s'] )))\t%s"%(id,id, name,name), "vgNameToggle(%d, name='%s', on=x)"%(id,name))
-            for name in sorted(viewers[id].viewer.m_moreGlLists_dict.keys()) if isinstance(name, basestring)],
+            for name in sorted(viewers[id].viewer.m_moreGlLists_dict.keys()) if isinstance(name, six.string_types)],
         title="named GFXs for viewer %d"%(id,),
         execModule=sys.modules['Priithon.usefulX'], #__import__(__name__),
-        panel=panel    
         )#, layout="boxVert")
 #             ("tb x.SetValue(0==len(viewers[%d].viewer.m_moreGlLists_nameBlacklist.intersection( viewers[%d].viewer.m_moreGlLists_dict['%s'] )))\t%s"%(id,id, name,name), "vgNameBlacklist(%d, name='%s', add=not x);vgNameEnable(%d, vGetZSecTuple(%d), on=True, skipBlacklisted=True, refreshNow=True) if x else vgNameEnable(%d, name='%s', on=x)"%(id,name,  id,id,id,name))
 #             for name in sorted(viewers[id].viewer.m_moreGlLists_dict.keys()) if isinstance(name, basestring)],
-        
-        bb= buttonBoxes[bbi]
-        for f in iterChildrenTree(bb.frame, includeParent=True, topdown=True):
-            f.Bind(wx.EVT_RIGHT_DOWN, onRBB)
-            tt = f.GetToolTip()
-            if tt:
-                tt.SetTip(tt.GetTip() + "\n --> right-click to refresh GFX-names")
 
-    doBB()
 
 
 def vgIdxAddName(id=-1, idx=0, name=''):
@@ -4194,7 +3899,7 @@ def vDrawingCircles(v_id=-1,
     v = viewers[v_id]
 
     from .splitND import spv as spv_class
-    #from .splitND2 import spv as spv2_class
+    #from splitND2 import spv as spv2_class
     
 
     if isinstance(v, spv_class):
@@ -4260,31 +3965,28 @@ def _registerEventHandler(handlerList, newFcn=None, newFcnName=None, oldFcnName=
     if newFcn is a string: it is executed in `__main__` with `args` containing the handler arguments
     """
     
-    if isinstance(newFcn, basestring):
+    if isinstance(newFcn, six.string_types):
         newFcnStr=newFcn
         def myCmdString(*args):#selfExecMod, x, b, ev, cmd=cmd):
             import __main__
-            exec newFcnStr in __main__.__dict__, {'args':args} #'_':selfExecMod, '_ev':ev, '_b':b, 'x':x}
+            exec(newFcnStr, __main__.__dict__, {'args':args}) #'_':selfExecMod, '_ev':ev, '_b':b, 'x':x}
         newFcn = myCmdString
 
     if newFcnName:
         try:
-            #20100106 - now we use more general way that also works for (callable) classes) newFcn.func_name = newFcnName
             newFcn.__name__ = newFcnName
         except AttributeError:
             # HACK for instance methods:
             # http://www.velocityreviews.com/forums/t395502-why-cant-you-pickle-instancemethods.html
-            newFcn.im_func.__name__ = newFcnName
+            newFcn.__func__.__name__ = newFcnName
 
     if oldFcnName is None:  # append new
         handlerList.append( newFcn )
         
     else:
         if oldFcnName == '':
-            try:
-                oldFcnName = newFcn.__name__ #20100106 func_name
-            except AttributeError:
-                oldFcnName = newFcn.__class__.__name__ #20100106 - CHECK find good default name
+            oldFcnName = newFcn.__name__
+
         ## iterate backwards, so that we can delete items
         for i in range(len(handlerList)-1,-1,-1):
             if handlerList[i].__name__ == oldFcnName:
@@ -4330,14 +4032,14 @@ def vAnimate(vids=-1):
         animationZ = 0
         while self.animationRunning or singleStep:
             try:
-                vids = map(int, self.animateVids.split())
-                axes = map(int, self.animateAxes.split())
+                vids = list(map(int, self.animateVids.split()))
+                axes = list(map(int, self.animateAxes.split()))
                 if len(axes) < len(vids):
                     axes += axes[-1:]*(len(vids)-len(axes))
                 strideStr = self.animateStrides
                 if '/' in strideStr:
                     strideStr, minMaxStr=strideStr.split('/',1)
-                    minMax = map(int, minMaxStr.split())
+                    minMax = list(map(int, minMaxStr.split()))
                     if len(minMax)>1:
                         minZ = minMax[0]
                         maxZ = minMax[1]
@@ -4348,7 +4050,7 @@ def vAnimate(vids=-1):
                     minZ = 0
                     maxZ = None
                     
-                strides = map(int, strideStr.split())
+                strides = list(map(int, strideStr.split()))
                 if len(strides) < len(vids):
                     strides += strides[-1:]*(len(vids)-len(strides))
                 #autoscales = map(int, self.animateAutoscale.split())
@@ -4415,10 +4117,7 @@ def vAnimate(vids=-1):
     if not hasattr(vids, "__len__"):
         vids = [vids]
     
-    try:
-        vids = [v%len(viewers) for v in vids] # normilize to substitute negative viewers ids
-    except ZeroDivisionError: # if len ==0
-        pass
+    vids = [v%len(viewers) for v in vids] # normilize to substitute negative viewers ids
     vidsStr = " ".join(map(str,vids))
     buttonBox([
     ("l\tvids"),

@@ -1,5 +1,5 @@
-"""Priithon - old: Dec 4, 2003  - unused !?"""
-from __future__ import absolute_import
+"""old: Dec 4, 2003  - unused !?"""
+
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 

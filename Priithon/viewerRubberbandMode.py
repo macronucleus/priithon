@@ -1,8 +1,3 @@
-"""
-Priithon
-"""
-from __future__ import absolute_import
-
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -24,7 +19,7 @@ class viewerRubberbandMode:
 
         gfxWhenDone should be one of: 'hide', 'remove', None
         """
-        from .all import Y
+        from Priithon.all import Y
         if type(id) is int:
             self.splitND = Y.viewers[id]
             self.viewer = Y.viewers[id].viewer
@@ -51,9 +46,9 @@ class viewerRubberbandMode:
             return self.ind()
         else:
             data = args[0]
-            takeAxes = range(data.ndim-2, data.ndim)
+            takeAxes = list(range(data.ndim-2, data.ndim))
             dataSubReg = data.take(self.ind(), takeAxes)
-            dataSubReg.transpose(range(2,data.ndim)+range(2))
+            dataSubReg.transpose(list(range(2,data.ndim))+list(range(2)))
             return dataSubReg
 
     def ind(self): # , compress=False):
@@ -107,7 +102,7 @@ class viewerRubberbandMode:
         if id is None:
             id = self.id
         if type(id) is int:
-            from .all import Y
+            from Priithon.all import Y
             data = Y.viewers[id].data
         else: 
             data = id
@@ -126,7 +121,7 @@ class viewerRubberbandMode:
         if id is None:
             id = self.id
         if type(id) is int:
-            from .all import Y
+            from Priithon.all import Y
             data = Y.viewers[id].data
         else: 
             data = id
@@ -159,13 +154,13 @@ class viewerRubberbandMode:
         self.yx0 = (int(yEff), int(xEff))
         #20070721 self.viewer.doLDown =self.onLeft2
         #20070721 self.viewer.doOnMouse = self.onMove
-        from .all import Y
+        from Priithon.all import Y
         Y._registerEventHandler(self.viewer.doOnLDown, newFcn=self.onLeft2, newFcnName='vLeftClickDoes')
         Y._registerEventHandler(self.viewer.doOnMouse, newFcn=self.onMove, newFcnName='vLeftClickDoes', oldFcnName=None)
         self.doThisAlsoOnStart()
         
     def onLeft2(self, xEff, yEff, ev):
-        from .all import Y
+        from Priithon.all import Y
         #self.yx1 = (yEff, xEff)
         def ppp(*args):
             pass
@@ -201,7 +196,7 @@ class viewerRubberbandMode:
         dy = y1-y0
         dx = x1-x0
 
-        from .all import U
+        from Priithon.all import U
 
         # even size
         if ev.AltDown():
@@ -249,7 +244,7 @@ class viewerRubberbandMode:
 
 
     def gfxUpdate(self):
-        from .all import Y
+        from Priithon.all import Y
         if self.rubberWhat == 'box':
             self.gfxIdx = \
                 Y.vgAddRect(self.id, [self.yx0 ,self.yx1], enclose=True, color=self.color, 
@@ -287,7 +282,7 @@ class viewerRubberbandMode:
             
             
 #     def my_defGlList(self):
-#         from .all import Y
+#         from Priithon.all import Y
 
 #         self.oldDefGlList()
 

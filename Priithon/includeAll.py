@@ -1,26 +1,16 @@
 """this is the GUI (PyShell) startup file"""
-from __future__ import absolute_import
 
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
-print "   !!!  Welcome to Priithon !!!"
-#from .all import *
-#SyntaxError: 'import *' not allowed with 'from .'
-#<hack>
-from . import all
-for n in all.__dict__:
-    if not n.startswith('_'):
-        exec "%s = all.%s" % (n,n)
-del n, all
-#</hack>
-
+print("   !!!  Welcome to Priithon !!!")
+from Priithon.all import *
 def _sebsDisplHook(v):
     if not v is None: # != None:
         import __main__ #global _
         #_ = v
         __main__._ = v
-        print U.myStr(v)
+        print(U.myStr(v))
         
 import sys
 sys.displayhook = _sebsDisplHook

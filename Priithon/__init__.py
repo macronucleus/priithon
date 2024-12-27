@@ -1,8 +1,6 @@
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
-# you might be looking for   all.py
-
 #_all__ = ["priism", "seb", "bettina","willy","lin", "bridget"]
 #  #from priism import *
 #  from priism.priism   import *

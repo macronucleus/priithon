@@ -1,9 +1,9 @@
 """
 """
-
-from plot_utility import *
+import sys
+from .plot_utility import *
 import wx
-from colormap     import colormap_map
+from .colormap     import colormap_map
 
 #-----------------------------------------------------------------------#
 #------- Attribute list/functions for objects in wxPython --------------#
@@ -21,7 +21,7 @@ tick_length = [0,1,2,3,4,5,6,7,8,9,10]
 line_style_map = {'solid':wx.SOLID,'dot dash': wx.DOT_DASH,
                  'dash':wx.SHORT_DASH,'dot': wx.DOT,
                  'long dash':wx.LONG_DASH,'transparent':wx.TRANSPARENT}   
-line_styles = line_style_map.keys()      
+line_styles = list(line_style_map.keys())      
 
 fill_style_map = {'solid':wx.SOLID,'stipple': wx.STIPPLE,
                  'back hatch':wx.BDIAGONAL_HATCH,
@@ -32,7 +32,7 @@ fill_style_map = {'solid':wx.SOLID,'stipple': wx.STIPPLE,
                  'vert hatch': wx.VERTICAL_HATCH,
                  'transparent':wx.TRANSPARENT
                  }                 
-fill_styles = fill_style_map.keys()
+fill_styles = list(fill_style_map.keys())
 
 image_type_map = { 'jpg': wx.BITMAP_TYPE_JPEG,
                    'jpeg': wx.BITMAP_TYPE_JPEG,
@@ -45,7 +45,10 @@ def get_color(in_color):
     """ Convert a color name or  rgb sequence to a wxColour
     """
     if type(in_color) == type(''):
-        color = wx.NamedColour(in_color) 
+        if wx.version().startswith('3'):
+            color = wx.NamedColour(in_color) 
+        else:
+            color = wx.Colour(in_color) 
     else: 
         r,g,b = in_color
         ##color = wx.Colour(r,g,b) # mod by GAP 26092003
@@ -72,12 +75,13 @@ def draw_point_list(start,stop,pen,dc):
         start and stop are 2xN arrays of x,y point coordinates.  N lines
         are drawn, one between each of the start,stop pairs using the
         specified pen.  The lines are drawn on the given device context, dc.    
-    """    
+    """
+    #print('draw_point_list')
     dc.SetPen(pen)
     for i in range(len(start)):
         pt1 = start[i]
         pt2 = stop[i]
-        dc.DrawLine(pt1[0],pt1[1],pt2[0],pt2[1])
+        dc.DrawLine(int(pt1[0]),int(pt1[1]),int(pt2[0]),int(pt2[1]))
     dc.SetPen(wx.NullPen)
 
 #-----------------------------------------------------------------------#
@@ -156,8 +160,8 @@ class text_object(box_object,property_object):
         """
         if self.visible in ['yes','on',1] and self.text:
             if not hasattr(self,'dc'):
-                raise ValueError, "no device context to calculate text " \
-                                  "size. Call set_dc() first."            
+                raise ValueError("no device context to calculate text " \
+                                  "size. Call set_dc() first.")            
             preset = (self.dc.GetFont() == self.font)
             if not preset: self.dc.SetFont(self.font)
             sz= array(self.dc.GetTextExtent(self.text))
@@ -174,7 +178,7 @@ class text_object(box_object,property_object):
         return sz
                                                     
     def set_size(self):
-        raise ValueError, "Can't set size of text objects"
+        raise ValueError("Can't set size of text objects")
         
     def draw(self,dc):
         """ Draw the text on the screen.
@@ -366,16 +370,14 @@ class axis_object(property_object):
         elif graph_location == 'below' or graph_location == 'right':
             self.tick_sign = 1                        
         else: 
-            raise ValueError, "graph_location can be 'left','right','above" \
-                              ", or 'below'. You tried '%s'" % graph_location    
+            raise ValueError("graph_location can be 'left','right','above" \
+                              ", or 'below'. You tried '%s'" % graph_location)    
         if not self.label_font:
             self.label_font = default_font()
             self.label_font.SetPointSize(10)
         self.bounds = ['auto', 'auto'] # each object needs its own bounds list
         self.omit_first_label = 0
         self.omit_last_label = 0
-        self.tickFormatter = str # seb 20100302
-
     def calculate_ticks(self,data_bounds):
         """ data bounds is (lower bound, upper bound)
            axis_settings is a 3-tuple (lower bound, upper bound, interval)
@@ -410,7 +412,7 @@ class axis_object(property_object):
     
     def create_labels(self):
         self.labels = []
-        tick_text = format_tick_labels(self.ticks, self.tickFormatter)
+        tick_text = format_tick_labels(self.ticks)
         for text in tick_text:
             label = text_object(text,(0,0),font=self.label_font,
                                            color=self.label_color)
@@ -447,7 +449,7 @@ class axis_object(property_object):
             length = graph_area.height()
             grid_length = graph_area.width()
         else: 
-            raise ValueError,'rotate must be 0 or 90. It is %d' % self.rotate            
+            raise ValueError('rotate must be 0 or 90. It is %d' % self.rotate)            
 
         # translate to screen units for the ticks.
         #### seb inserted CHECK for
@@ -513,9 +515,9 @@ class axis_object(property_object):
         # not currently used
         self.single_grid_line = []
         self.single_tick_line = []
-        ts = map(tuple,self.tick_start)
-        tc = map(tuple,self.tick_points)
-        te = map(tuple,self.tick_stop)
+        ts = list(map(tuple,self.tick_start))
+        tc = list(map(tuple,self.tick_points))
+        te = list(map(tuple,self.tick_stop))
         nn = len(self.tick_start)
         for i in range(nn):
             self.single_tick_line.append(tc[i])
@@ -600,8 +602,6 @@ class axis_window(wx.Window,axis_object):
 
     def format_popup(self,pos):
         menu = wx.Menu()
-        menu.Append(601, 'Change Axis Bounds', 'Change start and end point (and tick interval) of this axis')
-        wx.EVT_MENU(self, 601, self.OnAxisRange)
         menu.Append(600, 'Change Font', 'Change Text Font')
         wx.EVT_MENU(self, 600, self.OnFont)
         menu.UpdateUI()
@@ -619,29 +619,6 @@ class axis_window(wx.Window,axis_object):
             self.label_color = color.Red(),color.Green(),color.Blue()
             self.plot_canvas.update()
         dlg.Destroy()
-    def OnAxisRange(self, event):
-        oldBoundsTxt = "%s %s %s" % (self.bounds[0], self.bounds[1], self.tick_interval)
-        boundsTxt = wx.GetTextFromUser("Specify start and end of axis and (optionally) tick interval.\nUse <space> to separate those numbers or (for each) use `f` for tight fit and `a` for auto fit", 
-                                        "Axis Bounds and Tick Interval", oldBoundsTxt)
-        bounds = boundsTxt.split()
-        def fff(b):
-            if b.startswith('a'):
-                return 'auto'
-            elif b.startswith('f'):
-                return 'fit'
-            else:
-                return float(b)
-        bounds = [ fff(b) for b in bounds ]
-        self.bounds = list(self.bounds) # in case bounds was an ndarray before and user gave a non-float here
-        if len(bounds)>2:
-            self.tick_interval = bounds[2]
-        if len(bounds)>1:
-            self.bounds[1] = bounds[1]
-        if len(bounds)>0:
-            self.bounds[0] = bounds[0]
-
-        self.plot_canvas._saveZoomHist()
-        self.plot_canvas.update()            
 
 #-----------------------------------------------------------------------#
 #-------------------------- border_object ------------------------------#
@@ -732,9 +709,9 @@ class border_object(property_object):
         # this stuff is only needed for the fast_draw method
         # needs slight amount of work
         self.single_line = []
-        ts = map(tuple,self.tick_start)
-        tc = map(tuple,self.tick_center)
-        te = map(tuple,self.tick_stop)
+        ts = list(map(tuple,self.tick_start))
+        tc = list(map(tuple,self.tick_center))
+        te = list(map(tuple,self.tick_stop))
         nn = len(self.tick_start)
         for i in range(nn):
             self.single_line.append(tc[i])
@@ -776,6 +753,7 @@ class border_object(property_object):
         color = get_color(self.color)
         pen = wx.Pen(color, self.weight, style)        
         dc.SetPen(pen)
+        #print('draw_fast')
         dc.DrawLines(self.single_line)
         dc.SetPen(wx.NullPen)
 
@@ -809,9 +787,11 @@ class poly_line(poly_points):
             style = line_style_map[self.style]
             dc.SetPen(wx.Pen(color, self.weight,style))
             try:
+                #print('draw')
                 dc.DrawLines(self.scaled)           
             except:
-                dc.DrawLines(map(tuple,self.scaled))
+                #print('draw except')
+                dc.DrawLines(list(map(tuple,self.scaled)))
             dc.SetPen(wx.NullPen)
                     
 marker_styles = ['circle','square','dot','triangle','down_triangle',\
@@ -872,12 +852,12 @@ class poly_marker(poly_points):
                         (0.0,0.577350*size*6)],xc,yc)
 
     def _cross(self, dc, xc, yc, size=1):
-        dc.DrawLine(xc-3*size,yc-3*size,xc+3*size,yc+3*size)
-        dc.DrawLine(xc-3*size,yc+3*size,xc+3*size,yc-3*size)
+        dc.DrawLine(int(xc-3*size),int(yc-3*size),int(xc+3*size),int(yc+3*size))
+        dc.DrawLine(int(xc-3*size),int(yc+3*size),int(xc+3*size),int(yc-3*size))
 
     def _plus(self, dc, xc, yc, size=1):
-        dc.DrawLine(xc-3*size,yc,xc+3*size,yc)
-        dc.DrawLine(xc,yc-3*size,xc,yc+3*size)
+        dc.DrawLine(int(xc-3*size),int(yc),int(xc+3*size),int(yc))
+        dc.DrawLine(int(xc),int(yc-3*size),int(xc),int(yc+3*size))
 
 class line_object(poly_points):
     """ Combines poly_line and poly_marker into a single
@@ -958,8 +938,8 @@ class image_object(property_object):
             try:
                 colormap = colormap_map[self.colormap]
             except KeyError:
-                raise KeyError, 'Invalid colormap name. Choose from %s' \
-                                % `colormap_map.keys()`
+                raise KeyError('Invalid colormap name. Choose from %s' \
+                                % repr(list(colormap_map.keys())))
         else:
             colormap = self.colormap
         # scale image if we're supposed to.    
@@ -988,8 +968,8 @@ class image_object(property_object):
         return bb
 
     def scale_and_shift(self, scale=1, shift=0,upperleft=None,size=None):
-        if scale is 1: scale = array((1,1))
-        if shift is 0: shift = array((0,0))
+        if scale == 1: scale = array((1,1))
+        if shift == 0: shift = array((0,0))
         graph_pixels_per_axis_unit = scale
         self.scale = graph_pixels_per_axis_unit/self.image_pixels_per_axis_unit
         self.origin = shift
@@ -1006,14 +986,17 @@ class image_object(property_object):
         dc.DrawBitmap(bitmap, self.origin[0]+1, 
                       self.origin[1]-scaled_image.GetHeight()+1, False)
 
-import UserList
+if sys.version_info.major == 3:
+    from collections import UserList
+else:
+    from UserList import UserList
 huge = array((1e308,1e308))
 tiny = array((-1e308,-1e308))
-class graphic_list(UserList.UserList):
+class graphic_list(UserList):
     """ probably should have a layout method
     """
     def __init__(self):
-        UserList.UserList.__init__(self)
+        UserList.__init__(self)
     
     def bounding_box(self):
         p1 =[]; p2 = []

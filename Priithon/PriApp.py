@@ -10,7 +10,6 @@ IMPORT THIS FIRST - BEFORE FROM ALL IMPORT * - TO ENSURE A GOOD Y MODULE
  a) you define a main() function and it gets called when the module is executed
  b) if you are not already inside a wxApp, one gets created for you (including event loop)
 """
-from __future__ import absolute_import
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -18,7 +17,7 @@ import sys
 if not hasattr(sys, "app"):
     sys.app = None # dummy to force Priithon.Y getting loaded
 
-def _maybeExecMain(startPriShell=False):
+def _maybeExecMain():
     import sys,wx
     fr = sys._getframe(1)
     #print "__name__", __name__ 
@@ -28,11 +27,6 @@ def _maybeExecMain(startPriShell=False):
         if wx.GetApp():
             main(*sys.argv)
         else:
-            if startPriShell:
-                from Priithon import PriShell
-                PriShell.main(startMainLoop=False)
-            else:
-                sys.app = wx.PySimpleApp()
-            
+            sys.app = wx.App()#PySimpleApp()
             main(*sys.argv)
             sys.app.MainLoop()

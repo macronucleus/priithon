@@ -3,7 +3,6 @@ Priithon Y module: all functions to do with GUI -
   (!)BUT(!) this is the version that is imported in case 
   there is NO (X) GUI avalable
 """
-from __future__ import absolute_import
 #old"Priithon Y module: all functions to do with GUI - imports * from usefulX2"
 
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
@@ -44,9 +43,9 @@ if 1:
         sys.stdout.flush()
         sys.stderr.flush()
     def FN(verbose=0):
-        raise RuntimeError, "* sorry no GUI *"
+        raise RuntimeError("* sorry no GUI *")
     def DIR(verbose=0):
-        raise RuntimeError, "* sorry no GUI *"
+        raise RuntimeError("* sorry no GUI *")
 
 
 #del sys

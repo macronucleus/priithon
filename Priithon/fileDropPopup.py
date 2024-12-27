@@ -2,7 +2,6 @@
 Priithon pyshell / view / view2 support file drag-and-drop
     -> a popup menu presents a choice of what to do
 """
-from __future__ import absolute_import
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -24,7 +23,6 @@ Menu_import = wx.NewId()
 Menu_importAs = wx.NewId()
 Menu_editor = wx.NewId()
 Menu_editor2 = wx.NewId()
-Menu_loadTxt2d = wx.NewId()
 Menu_assignSeq = wx.NewId()
 Menu_viewSeq = wx.NewId()
 
@@ -39,7 +37,10 @@ class FileDropTarget(wx.FileDropTarget):
             self.pyshell = pyshell
         else:
             import __main__
-            self.pyshell = __main__.shell
+            if hasattr(__main__, 'shell'):
+                self.pyshell = __main__.shell
+            else:
+                self.pyshell = None
 
     def OnDropFiles(self, x, y, filenames):
         if len(filenames) == 1:
@@ -81,7 +82,6 @@ class FileDropTarget(wx.FileDropTarget):
                 m.Append(Menu_assign,  "load and assign to var")
                 m.Append(Menu_view,   "view")
                 m.Append(Menu_view2,    "view multi-color")
-                m.Append(Menu_loadTxt2d,    "load text table", "load tab-separated CVS")
                 m.Append(Menu_editor2,   "edit text file")
                 m.Append(Menu_assignFN,   "assign filename to var")
 
@@ -95,27 +95,31 @@ class FileDropTarget(wx.FileDropTarget):
             
         m.Append(Menu_paste,   "paste")
 
-        wx.EVT_MENU(self.parent, Menu_assign, self.onAssign)
-        wx.EVT_MENU(self.parent, Menu_assignFN, self.onAssignFN)
-        wx.EVT_MENU(self.parent, Menu_assignList,self.onAssignList)
-        wx.EVT_MENU(self.parent, Menu_paste, self.onPaste)
-        wx.EVT_MENU(self.parent, Menu_view,  self.onView)
-        wx.EVT_MENU(self.parent, Menu_view2,  self.onView2)
-        wx.EVT_MENU(self.parent, Menu_dir,  self.onDir)
-        wx.EVT_MENU(self.parent, Menu_cd,  self.onCd)
-        wx.EVT_MENU(self.parent, Menu_appSysPath,  self.onAppSysPath)
-        wx.EVT_MENU(self.parent, Menu_assignSeq, self.onAssignSeq)
-        wx.EVT_MENU(self.parent, Menu_viewSeq, self.onViewSeq)
-
-        wx.EVT_MENU(self.parent, Menu_exec,  self.onExe)
-        wx.EVT_MENU(self.parent, Menu_import,  self.onImport)
-        wx.EVT_MENU(self.parent, Menu_importAs,  self.onImportAs)
-        wx.EVT_MENU(self.parent, Menu_editor,  self.onEditor)
-        wx.EVT_MENU(self.parent, Menu_loadTxt2d,  self.onLoadTxt)
-        wx.EVT_MENU(self.parent, Menu_editor2,  lambda ev:self.onEditor(ev, checkPyFile=False))
+        # 20180114 deprecation warning
+        self.parent.Bind(wx.EVT_MENU, self.onAssign, id=Menu_assign)
+        self.parent.Bind(wx.EVT_MENU, self.onAssignFN, id=Menu_assignFN)
+        self.parent.Bind(wx.EVT_MENU, self.onAssignList, id=Menu_assignList)
+        self.parent.Bind(wx.EVT_MENU, self.onPaste, id=Menu_paste)
+        self.parent.Bind(wx.EVT_MENU, self.onView, id=Menu_view)
+        self.parent.Bind(wx.EVT_MENU, self.onView2, id=Menu_view2)
+        self.parent.Bind(wx.EVT_MENU, self.onDir, id=Menu_dir)
+        self.parent.Bind(wx.EVT_MENU, self.onCd, id=Menu_cd)
+        self.parent.Bind(wx.EVT_MENU, self.onAppSysPath, id=Menu_appSysPath)
+        self.parent.Bind(wx.EVT_MENU, self.onAssignSeq, id=Menu_assignSeq)
+        self.parent.Bind(wx.EVT_MENU, self.onViewSeq, id=Menu_viewSeq)
         
-        self.parent.PopupMenuXY(m, x,y)
+        self.parent.Bind(wx.EVT_MENU, self.onExe, id=Menu_exec)
+        self.parent.Bind(wx.EVT_MENU, self.onImport, id=Menu_import)
+        self.parent.Bind(wx.EVT_MENU, self.onImportAs, id=Menu_importAs)
+        self.parent.Bind(wx.EVT_MENU, self.onEditor, id=Menu_editor)
+        self.parent.Bind(wx.EVT_MENU, self.onEditor2, id=Menu_editor2)
 
+        if wx.version().startswith('3'):
+            self.parent.PopupMenuXY(m, x,y)
+        else:
+            self.parent.PopupMenu(m, x,y)
+
+        return True # 20180114 wxpython Phoenix
 
 
     def onPaste(self, ev):
@@ -129,12 +133,12 @@ class FileDropTarget(wx.FileDropTarget):
         self.pyshell.SetCurrentPos( pos )
         self.pyshell.SetSelection( pos, pos )
     def onView(self, ev):
-        from .all import Y
+        from Priithon.all import Y
         Y.view(self.fn_or_fns) # 'list' for "view separately"
 
         self.pyshell.addHistory("Y.view( %s )"%(self.txt,))
     def onView2(self, ev):
-        from .all import Y
+        from Priithon.all import Y
         if isinstance(self.fn_or_fns, (list, tuple)) and len(self.fn_or_fns) > 1:
             f = tuple( self.fn_or_fns )  # 'tuple' for "view as mock-adarray"
             self.txt = '( '
@@ -146,19 +150,16 @@ class FileDropTarget(wx.FileDropTarget):
         Y.view2(f, colorAxis='smart')
         self.pyshell.addHistory("Y.view2( %s, colorAxis='smart')"%(self.txt,))
     def onDir(self, ev):
-        from .all import Y
+        from Priithon.all import Y
         Y.listFilesViewer(self.fn_or_fns)
         self.pyshell.addHistory("Y.listFilesViewer(r\"%s\")"%(self.fn_or_fns,))
     def onCd(self, ev):
         import os
-        from .all import Y
         os.chdir( self.fn_or_fns )
-        s = "os.chdir(r\"%s\")"%(self.fn_or_fns,)
-        Y.shellMessage("###  %s\n"% s)
-        self.pyshell.addHistory(s)
+        self.pyshell.addHistory("os.chdir(r\"%s\")"%(self.fn_or_fns,))
     def onAppSysPath(self, ev):
         import sys
-        from .all import Y
+        from Priithon.all import Y
         sys.path.append( self.fn_or_fns )
         s = "sys.path.append(r\"%s\")"% (self.fn_or_fns,)
         Y.shellMessage("###  %s\n"% s)
@@ -166,7 +167,7 @@ class FileDropTarget(wx.FileDropTarget):
 
     def onAssign(self, ev):
         fn = self.fn_or_fns
-        from .all import Y
+        from Priithon.all import Y
         a = Y.load(fn)
         if a is not None:
             v = Y.assignNdArrToVarname(a, "Y.load( r'%s' )"%fn)
@@ -178,7 +179,7 @@ class FileDropTarget(wx.FileDropTarget):
             return
         import __main__
         try:
-            exec '%s = %s' % (v,self.txt) in __main__.__dict__
+            exec('%s = %s' % (v,self.txt), __main__.__dict__)
         except:
             if NO_SPECIAL_GUI_EXCEPT:
                 raise
@@ -189,7 +190,7 @@ class FileDropTarget(wx.FileDropTarget):
                           "Bad Varname  !?",
                           style=wx.ICON_ERROR)
         else:
-            from .all import Y
+            from Priithon.all import Y
             s = "%s = %s"% (v, self.txt)
             Y.shellMessage("### %s\n"% (s,))
             self.pyshell.addHistory(s)
@@ -199,7 +200,7 @@ class FileDropTarget(wx.FileDropTarget):
             return
         import __main__
         try:
-            exec '%s = %s' % (v, self.fn_or_fns) in __main__.__dict__
+            exec('%s = %s' % (v, self.fn_or_fns), __main__.__dict__)
         except:
             if NO_SPECIAL_GUI_EXCEPT:
                 raise
@@ -210,17 +211,18 @@ class FileDropTarget(wx.FileDropTarget):
                           "Bad Varname  !?",
                           style=wx.ICON_ERROR)
         else:
-            from .all import Y
+            from Priithon.all import Y
             Y.shellMessage("### %s = <list of files>\n"% (v,))
 
     def onAssignSeq(self, ev):
-        from .all import Y
+        from Priithon.all import Y
         v = wx.GetTextFromUser("assign image sequence to array varname:", 'new variable')
         if not v:
             return
         import __main__
         try:
-            exec '%s = U.loadImg_seq(%s)' % (v,self.fn_or_fns) in __main__.__dict__
+            #exec('%s = U.loadImg_seq(%s)' % (v,self.fn_or_fns), __main__.__dict__)
+            exec('%s = U.load(%s)' % (v,self.fn_or_fns), __main__.__dict__)
         except:
             if NO_SPECIAL_GUI_EXCEPT:
                 raise
@@ -234,9 +236,10 @@ class FileDropTarget(wx.FileDropTarget):
             Y.shellMessage("### %s = U.loadImg_seq(<list of files>)\n"% (v,))
 
     def onViewSeq(self, ev):
-        from .all import Y,U
+        from Priithon.all import Y,U
         try:
-            Y.view( U.loadImg_seq( self.fn_or_fns ) )
+            #Y.view( U.loadImg_seq( self.fn_or_fns ) )
+            Y.view( U.load( self.fn_or_fns ) )
         except:
             if NO_SPECIAL_GUI_EXCEPT:
                 raise
@@ -257,10 +260,8 @@ class FileDropTarget(wx.FileDropTarget):
         sys.path.insert(0, p)
         try:
             try:
-                from .all import Y
-                Y.shellMessage("### execfile(r\"%s\")\n"%(self.fn_or_fns,))
                 self.pyshell.addHistory("execfile(r\"%s\")"%(self.fn_or_fns,))
-                execfile(self.fn_or_fns, __main__.__dict__)
+                exec(compile(open(self.fn_or_fns).read(), self.fn_or_fns, 'exec'), __main__.__dict__)
             except:
                 if NO_SPECIAL_GUI_EXCEPT:
                     raise
@@ -269,6 +270,10 @@ class FileDropTarget(wx.FileDropTarget):
                               (str(e[0]), str(e[1]) ),
                               "Bad Varname  !?",
                               style=wx.ICON_ERROR)
+            else:
+                from Priithon.all import Y
+                Y.shellMessage("### execfile('%s')\n"%(self.fn_or_fns,))
+                self.pyshell.addHistory("execfile('%s')\n"%(self.fn_or_fns,))
         finally:
             #20090319 del sys.path[0]
             sys.path.remove(p)
@@ -281,7 +286,7 @@ class FileDropTarget(wx.FileDropTarget):
             try:
                 mod = os.path.basename( self.fn_or_fns )
                 mod = os.path.splitext( mod )[0]
-                exec ('import %s' % mod) in __main__.__dict__
+                exec(('import %s' % mod), __main__.__dict__)
                 self.pyshell.addHistory("import %s"%mod)
             except:
                 if NO_SPECIAL_GUI_EXCEPT:
@@ -293,7 +298,7 @@ class FileDropTarget(wx.FileDropTarget):
                               "Bad Varname  !?",
                               style=wx.ICON_ERROR)
             else:
-                from .all import Y
+                from Priithon.all import Y
                 Y.shellMessage("### import %s\n"% (mod,))
         finally:
             if wx.MessageBox("leave '%s' in front of sys.path ?" % (p,), 
@@ -313,7 +318,7 @@ class FileDropTarget(wx.FileDropTarget):
                 mod = os.path.basename( self.fn_or_fns )
                 mod = os.path.splitext( mod )[0]
                 s = 'import %s as %s' % (mod, v)
-                exec (s) in __main__.__dict__
+                exec((s), __main__.__dict__)
                 self.pyshell.addHistory(s)
             except:
                 if NO_SPECIAL_GUI_EXCEPT:
@@ -325,7 +330,7 @@ class FileDropTarget(wx.FileDropTarget):
                               "Bad Varname  !?",
                               style=wx.ICON_ERROR)
             else:
-                from .all import Y
+                from Priithon.all import Y
                 Y.shellMessage("### import %s as %s\n"% (mod,v))
         finally:
             if wx.MessageBox("leave '%s' in front of sys.path ?" % (p,), 
@@ -333,6 +338,8 @@ class FileDropTarget(wx.FileDropTarget):
                 #20090319 del sys.path[0]
                 sys.path.remove(p)
 
+    def onEditor2(self, ev):
+        self.onEditor(ev, checkPyFile=False)
     def onEditor(self, ev, checkPyFile=True):
         import sys,os, __main__
         try:
@@ -348,7 +355,7 @@ class FileDropTarget(wx.FileDropTarget):
                     if r != wx.YES:
                         return
 
-            from .all import Y
+            from Priithon.all import Y
             Y.editor(mod)
             self.pyshell.addHistory("Y.editor( %s )"%mod)
         except:
@@ -360,25 +367,3 @@ class FileDropTarget(wx.FileDropTarget):
                               (str(e[0]), str(e[1]) ),
                           "Error  !?",
                           style=wx.ICON_ERROR)
-    def onLoadTxt(self, ev):
-        v = wx.GetTextFromUser("load 2d table to varname:", 'new variable')
-        if not v:
-            return
-        import __main__
-        exeStr = '%s = U.loadTxt(%s,2)' % (v,self.txt)
-        try:
-            exec exeStr in __main__.__dict__
-        except:
-            if NO_SPECIAL_GUI_EXCEPT:
-                raise
-            import sys
-            e = sys.exc_info()
-            wx.MessageBox("Error when loading txt file to %s: %s - %s" %\
-                          (v, str(e[0]), str(e[1]) ),
-                          "Bad Varname  !?",
-                          style=wx.ICON_ERROR)
-        else:
-            from .all import Y
-            s = exeStr
-            Y.shellMessage("### %s\n"% (s,))
-            self.pyshell.addHistory(s)

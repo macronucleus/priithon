@@ -10,12 +10,12 @@ Both `buttonBoxAdd()` and `buttonBox()` take the same `itemList` argument
    each `item` in `itemList` is translated into a call of
      1) startNewRow(weight, expand)
    or
-     2) addButton(label, cmd, weight, expand, tooltip, iniFcn)
+     2) addButton(label, cmd, weight, expand)
 
 if `item` is a list or tuple, up to 4 things can be specified:
      1.) `label` (i.e. text on button or text in textCtrl)
      2.) `command`  (default: None)
-     3.) `weight` - items will get screen-space by relative weight (default: 1)
+     3.) `weight` - items will get screen-space by relative weight (default: 1.0)
      4.) `expand` - adjust size vertically (on resizing buttonBox) (default: True)
      5.) `tooltip` - set mouse-over tooltip (default: the cmd string)
   .if `item` is a string, it specifies `label` and uses the above defaults for all others
@@ -67,8 +67,8 @@ buttonBox([('c\ton/off', 'print x'),
 buttonBox([('l\tx-value:','',0),('t\t1234', '_.x=float(x)')])
 buttonBox([('l\tx-value:','',0),('t _.myText=x\t1234', '_.textVal=x;print x')])
 """
-from __future__ import absolute_import
-
+from __future__ import print_function
+import six
 import wx
 try:
     buttonBoxes
@@ -76,36 +76,27 @@ except:
     buttonBoxes=[]
 class _buttonBox:
     def __init__(self, title="button box",
-                 execModule=None,
-                 layout = "boxHoriz",
-                 panel=None,
                  parent=None,
                  pos=wx.DefaultPosition,
-                 style=wx.DEFAULT_FRAME_STYLE):
+                 style=wx.DEFAULT_FRAME_STYLE,
+                 layout = "boxHoriz",
+                 execModule=None):
         """
         if execModule is None: use __main__
-               otherwise exec all string-command there
 
         layout:
           boxHoriz OR h   - horizontal BoxSizer, use "\n" to start new row
           boxVert  OR v   - vertical   BoxSizer, use "\n" to start new column
           (nx,ny)           - FlexGridSizer (one of nx or ny can be 0)
           (nx,ny,hgap,vgap) - FlexGridSizer (one of nx or ny can be 0)
-        
-        panel: put buttons into this panel
-          - if None: 
-             create new frame
-             use title, parent, pos and style for that frame
         """
         global buttonBoxes
         self.i = len(buttonBoxes)
 
-        if panel is None:
-           # self.frame = wx.Frame(parent, -1, title + " (%d)", style=style)
-           self.frame = wx.Frame(parent, -1, title, style=style,
-                                 pos=pos)
-        else:
-           self.frame = panel
+        #self.frame = wx.Frame(parent, -1, title + " (%d)", style=style)
+        self.frame = wx.Frame(parent, -1, title, style=style,
+                              pos=pos)
+
         self.useGridsizer = type(layout) in (list,tuple)
 
         if self.useGridsizer:
@@ -122,15 +113,10 @@ class _buttonBox:
         self.sizers=[]
         self.startNewRow()
         self.frame.SetSizer(self.sizer0Vert)
-
-        #20100126 Gtk-CRITICAL **: gtk_window_resize: assertion `width > 0' failed
-        #20100126 self.sizer0Vert.SetSizeHints(self.frame)
+        self.sizer0Vert.SetSizeHints(self.frame)
         self.frame.SetAutoLayout(1)
-        #20100126 self.sizer0Vert.Fit(self.frame)
-
-        if panel is None:
-           self.frame.Show()
-
+        self.sizer0Vert.Fit(self.frame)
+        self.frame.Show()
         #self.nButtons = 0  ## use instead: len(self.doOnEvt)
         self.doOnEvt = [] # list of event-handler lists;
         #    each is a handler called like: f(execModule, value, buttonObj, evt)
@@ -145,11 +131,8 @@ class _buttonBox:
 
         self.doOnClose = [] # (self, ev)
         
-        if self.frame.IsTopLevel():
-           wx.EVT_CLOSE(self.frame, self.onClose)
-        else:
-           wx.EVT_WINDOW_DESTROY(self.frame, self.onClose)
-
+        #wx.EVT_CLOSE(self.frame, self.onClose)
+        self.frame.Bind(wx.EVT_CLOSE, self.onClose)
 
     def onClose(self, ev):
         try:
@@ -162,18 +145,17 @@ class _buttonBox:
             try:
                 f( self, ev )
             except:
-                print >>sys.stderr, " *** error in onClose **"
+                print(" *** error in onClose **", file=sys.stderr)
                 traceback.print_exc()
-                print >>sys.stderr, " *** error in onClose **"
+                print(" *** error in onClose **", file=sys.stderr)
 
-        if self.frame.IsTopLevel(): # 20090624
-           #20090226: explicitely call close on children to make their onClose() get triggered
-           # inspired by http://aspn.activestate.com/ASPN/Mail/Message/wxPython-users/2020248
-           # see also: http://aspn.activestate.com/ASPN/Mail/Message/wxPython-users/2020643
-           for child in self.frame.GetChildren():
-                child.Close(True)
+        #20090226: explicitely call close on children to make their onClose() get triggered
+        # inspired by http://aspn.activestate.com/ASPN/Mail/Message/wxPython-users/2020248
+        # see also: http://aspn.activestate.com/ASPN/Mail/Message/wxPython-users/2020643
+        for child in self.frame.GetChildren():
+             child.Close(True)
 
-           self.frame.Destroy()
+        self.frame.Destroy()
         
     def startNewRow(self, weight=1,expand=True):
         if self.useGridsizer: 
@@ -191,7 +173,7 @@ class _buttonBox:
         ss=self.sizers[-1]
         self.sizer0Vert.Add(ss, weight, expand|wx.ALL, 0)
 
-    def addButton(self, label, cmd=None, refitFrame=True, weight=1,expand=True,tooltip=None, iniFcn=None):
+    def addButton(self, label, cmd=None, refitFrame=True, weight=1,expand=True,tooltip=None):
         """
         if label is of form "X\\t...":
            if X is 'b'  a button will be created (that;s also the default)
@@ -237,8 +219,6 @@ class _buttonBox:
            set tooltip to be the cmd-string, or another expaining string
         else: 
            set tooltip as given
-        iniFcn (string): exec like the ' '-syntax in label
-               (callable): call with (execModule, button) as arguments
 
         NOTE:
             all execs are done in a given `execModule` as globals()
@@ -264,15 +244,8 @@ class _buttonBox:
 
         if ' ' in typ:
             typ, exec_to_name_control = typ.split(' ', 1)
-            if iniFcn is not None:
-               raise ValueError, "if iniFcn is given, you cannot also use exec_to_name_control syntax"
         else:
-           #if iniFcn is None:
-           #   exec_to_name_control = ''
-           #else:
-           #   exec_to_name_control = iniFcn
-           exec_to_name_control = iniFcn
-            
+            exec_to_name_control = ''
 
         typ = typ.lower()
         if   typ == 'b':
@@ -285,7 +258,7 @@ class _buttonBox:
                 cmd = label
         elif typ == 'sl':
             if label:
-                value,minVal,maxVal = map(int, label.split())
+                value,minVal,maxVal = list(map(int, label.split()))
             else:
                 value,minVal,maxVal = 0,0,100
             b = wx.Slider(self.frame, wx.ID_ANY, value,minVal,maxVal
@@ -325,26 +298,20 @@ class _buttonBox:
             
             b = wx.StaticText(self.frame, wx.ID_ANY, label, style=wx.ALIGN_RIGHT)
         else:
-            raise ValueError, "unknown control type (%s)"% typ
+            raise ValueError("unknown control type (%s)"% typ)
         if exec_to_name_control:
-           # exec exec_to_name_control in self.execModule.__dict__, {'x':b, '_':self.execModule}
-           if isinstance(exec_to_name_control, basestring):
-              exec exec_to_name_control in self.execModule.__dict__, {'x':b, '_':self.execModule}
-           elif callable(exec_to_name_control):
-              exec_to_name_control(self.execModule, b)
-           else:
-              raise ValueError, "iniFcn cmd must be a string or a callable" # ?? or a list of callables"
+            exec(exec_to_name_control, self.execModule.__dict__, {'x':b, '_':self.execModule})
 
         if tooltip is not None:
-           b.SetToolTipString( tooltip )
+           b.SetToolTip( tooltip )
         elif cmd:
-            if isinstance(cmd, basestring):
-                b.SetToolTipString( cmd )
+            if isinstance(cmd, six.string_types):
+                b.SetToolTip( cmd )
             else:
                 try:
-                   b.SetToolTipString( "call '%s' [%s]" % (cmd.__name__, cmd) )
+                   b.SetToolTip( "call '%s' [%s]" % (cmd.__name__, cmd) )
                 except AttributeError:
-                   b.SetToolTipString( str(cmd) )
+                   b.SetToolTip( str(cmd) )
 
                
         if expand:
@@ -371,7 +338,7 @@ class _buttonBox:
         ## a string with two '%s':  1) the 'x' variable 2) the "wx.EVT_BUTTON" command
         ##
         _f_template = '''
-if isinstance(cmd, basestring):
+if isinstance(cmd, six.string_types):
    def myCmdString(selfExecMod, x, b, ev, cmd=cmd):
       exec cmd in selfExecMod.__dict__, {'_':selfExecMod, '_ev':ev, '_b':b, 'x':x}
    doOnEvt.insert(0, myCmdString)
@@ -386,7 +353,7 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
        try:
           f(self.execModule, %s, b, ev)
        except:
-          from . import PriConfig
+          import PriConfig
           if PriConfig.raiseEventHandlerExceptions:
              raise
           else:
@@ -395,17 +362,17 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
              traceback.print_exc()
              print >>sys.stderr, " *** error in doOnEvt[%%d] **"%%(iii,)
 
-%s(self.frame, b.GetId(), OnB)
+self.frame.Bind(%s, OnB, id=b.GetId())
 '''
 
         ##
         ###################################################
         if typ == 'b':
            #print 'xxxxxxxxx', 'cmd' in locals()
-           exec _f_template%('ev.GetString()', 'wx.EVT_BUTTON') in globals(), locals()
+           exec(_f_template%('ev.GetString()', 'wx.EVT_BUTTON'), globals(), locals())
 
            '''
-           if isinstance(cmd, basestring):
+           if isinstance(cmd, six.string_types):
               def myCmdString(selfExecMod, x, b, ev):
                  exec cmd in selfExecMod.__dict__, {'_':selfExecMod, '_ev':ev, '_b':b, 'x':x}
               doOnEvt.insert(0, myCmdString)
@@ -426,10 +393,10 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
            wx.EVT_BUTTON(self.frame, b.GetId(), OnB)
            '''
         elif typ == 'tb':
-           exec _f_template%('ev.GetInt()', 'wx.EVT_TOGGLEBUTTON') in globals(), locals()
+           exec(_f_template%('ev.GetInt()', 'wx.EVT_TOGGLEBUTTON'), globals(), locals())
            '''
             if cmd:
-               if isinstance(cmd, basestring):
+               if isinstance(cmd, six.string_types):
                   def OnB(ev):
                      exec cmd in self.execModule.__dict__, {'_':self.execModule, '_ev':ev, '_b':b, 'x':ev.GetInt()}
                elif callable(cmd):
@@ -440,20 +407,20 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
                wx.EVT_TOGGLEBUTTON(self.frame, b.GetId(), OnB)
            '''
         elif typ == 'sl':
-           exec _f_template%('ev.GetInt()', 'wx.EVT_SLIDER') in globals(), locals()
+           exec(_f_template%('ev.GetInt()', 'wx.EVT_SLIDER'), globals(), locals())
            #if cmd:
            #     def OnB(ev):
            #         exec cmd in self.execModule.__dict__, {'_':self.execModule, '_ev':ev, '_b':b, 'x':ev.GetInt()}
            #    wx.EVT_SLIDER(self.frame, b.GetId(), OnB)
         elif typ == 't':
-           exec _f_template%('ev.GetString()', 'wx.EVT_TEXT') in globals(), locals()
+           exec(_f_template%('ev.GetString()', 'wx.EVT_TEXT'), globals(), locals())
            
            #if cmd:
            #     def OnT(ev):
            #         exec cmd in self.execModule.__dict__, {'_':self.execModule, '_ev':ev, '_b':b, 'x':ev.GetString()}
            #     wx.EVT_TEXT(self.frame, b.GetId(), OnT)
         elif typ == 'c':
-           exec _f_template%('ev.IsChecked()', 'wx.EVT_CHECKBOX') in globals(), locals()
+           exec(_f_template%('ev.IsChecked()', 'wx.EVT_CHECKBOX'), globals(), locals())
            #if cmd:
            #     def OnC(ev):
            #         exec cmd in self.execModule.__dict__, {'_':self.execModule, '_ev':ev, '_b':b, 'x':ev.IsChecked()}
@@ -473,12 +440,11 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
         
 
 def buttonBox(itemList=[], title="button box",
-              execModule=None,
-              layout = "boxHoriz",
-              panel=None,
               parent=None,
               pos=wx.DefaultPosition,
-              style=wx.DEFAULT_FRAME_STYLE):
+              style=wx.DEFAULT_FRAME_STYLE,
+              layout = "boxHoriz",
+              execModule=None):
     """
     create new button box
 
@@ -498,13 +464,8 @@ def buttonBox(itemList=[], title="button box",
           (nx,ny,hgap,vgap) - FlexGridSizer (one of nx or ny can be 0)
          -- all other docstring assume boxHoriz
     if execModule is None: use __main__
-           otherwise exec all string-command there
-    panel: put buttons into this panel
-      - if None: 
-         create new frame
-         use title, parent, pos and style for that frame
     """
-    bb = _buttonBox(title, execModule, layout, panel, parent, pos, style)
+    bb = _buttonBox(title, parent, pos, style, layout, execModule)
     buttonBoxAdd(itemList)
 
 def buttonBoxAdd(itemList, bb_id=-1):
@@ -526,10 +487,6 @@ def buttonBoxAdd(itemList, bb_id=-1):
 
     for it in itemList:
         if type(it) in (list, tuple):
-            try:
-                iniFcn=it[5]
-            except:
-                iniFcn=None
             try:
                 tooltip=it[4]
             except:
@@ -553,11 +510,11 @@ def buttonBoxAdd(itemList, bb_id=-1):
             weight=1
             expand=True
             tooltip=None
-            iniFcn=None
         if label == '\n':
             bb.startNewRow(weight=weight,expand=expand)
         else:
-            bb.addButton(label, cmd, refitFrame=False, weight=weight,expand=expand,tooltip=tooltip, iniFcn=iniFcn)
+            bb.addButton(label, cmd, refitFrame=False, weight=weight,expand=expand,tooltip=tooltip)
+
 
     bb.frame.Fit()
 

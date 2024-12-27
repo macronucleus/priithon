@@ -1,20 +1,13 @@
 """provides the bitmap OpenGL panel for Priithon's ND 2d-section-viewer
 """
-from __future__ import absolute_import
+from __future__ import print_function
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
-#from .viewerCommon import *
-#SyntaxError: 'import *' not allowed with 'from .'
-#<hack>
-from . import viewerCommon
-for n in viewerCommon.__dict__:
-    if not n.startswith('_'):
-        exec "%s = viewerCommon.%s" % (n,n)
-del n, viewerCommon
-#</hack>
+from .viewerCommon import *
 
 
+    
 
 class GammaPopup(wx.Frame):
     def __init__(self, viewer):
@@ -42,9 +35,14 @@ class GammaPopup(wx.Frame):
         wx.EVT_SLIDER(self, self.slider.GetId(), self.OnSlider)
         wx.EVT_TEXT(self, self.txtctrl.GetId(), self.OnText)        
 
-        wx.EVT_KEY_DOWN(self, self.OnKeyDown)
-        wx.EVT_KEY_DOWN(self.txtctrl, self.OnKeyDown)
-        wx.EVT_KEY_DOWN(self.slider, self.OnKeyDown)
+        #20171225-PY2to3 deprecation warning use Append
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.txtctrl.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.slider.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        
+        #wx.EVT_KEY_DOWN(self, self.OnKeyDown)
+        #wx.EVT_KEY_DOWN(self.txtctrl, self.OnKeyDown)
+        #wx.EVT_KEY_DOWN(self.slider, self.OnKeyDown)
         self.updateGamma()
         self.txtctrl.SetFocus()
 
@@ -91,13 +89,17 @@ class GammaPopup(wx.Frame):
 
     def updateGamma(self):
         self._lastGamma_set = self.gamma
-        self.v.cmgray(self.gamma)
+        #self.v.cmgray(self.gamma)
+        self.v.gamma = self.gamma
+        self.v.setGamma()
+        self.v.changeHistogramScaling()
+        self.v.updateHistColMap()
         
 
 
 class GLViewer(GLViewerCommon):
-    def __init__(self, parent, imgArr, size=wx.DefaultSize, originLeftBottom=None):
-        GLViewerCommon.__init__(self, parent, size, originLeftBottom)
+    def __init__(self, parent, imgArr, size=wx.DefaultSize, originLeftBottom=None):#, depth=32):
+        GLViewerCommon.__init__(self, parent, size, originLeftBottom)#, depth=depth)
 
         self.m_viewComplexAsAbsNotPhase = True
         #20071114 self.m_imgToDo = imgArr
@@ -111,6 +113,7 @@ class GLViewer(GLViewerCommon):
         else:
             self.m_originLeftBottom = originLeftBottom
 
+        self.gamma = 1
         self.m_imgArr = imgArr
         self.pic_nx = 0  # size as used in current texture
         self.pic_ny = 0
@@ -137,7 +140,9 @@ class GLViewer(GLViewerCommon):
         if not wx.Platform == '__WXMSW__': #20070525-black_on_black on Windows
             self.SetCursor(wx.CROSS_CURSOR)
 
-        wx.EVT_PAINT(self, self.OnPaint)
+        # 20171225-PY2to3 deprecation warning 
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        #wx.EVT_PAINT(self, self.OnPaint)
         
         #EVT_MIDDLE_DOWN(self, self.OnMiddleDown)
         self.MakePopupMenu()
@@ -163,13 +168,17 @@ class GLViewer(GLViewerCommon):
         self.m_menu_colmap.AppendRadioItem(Menu_ColMap[1],    "gray (logathmic)")
         self.m_menu_colmap.AppendRadioItem(Menu_ColMap[2],    "rainbow")
         self.m_menu_colmap.AppendRadioItem(Menu_ColMap[3],    "blackbody")
-        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[4],    "rainbow-cycle")
-        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[5],    "rainbow-fastCycle")
-        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[6],    "gray-Min-Max")
-        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[7],    "gamma...")
+        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[4],    "magma")
+        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[5],    "viridis")
+        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[6],    "rainbow-cycle")
+        #self.m_menu_colmap.AppendRadioItem(Menu_ColMap[5],    "rainbow-fastCycle")
+        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[7],    "gray-Min-Max")
+        self.m_menu_colmap.AppendRadioItem(Menu_ColMap[8],    "gamma...")
         #self.m_menu_save.Append(Menu_SaveND,  "save nd stack into file")
         for i in range(len(Menu_ColMap)):
-            wx.EVT_MENU(self, Menu_ColMap[i],      self.OnMenuColMap)
+            # 20171225-PY2to3 deprecation warning 
+            self.Bind(wx.EVT_MENU, self.OnMenuColMap, id=Menu_ColMap[i])
+            #wx.EVT_MENU(self, Menu_ColMap[i],      self.OnMenuColMap)
 
         self.m_menu = wx.Menu()
 
@@ -178,38 +187,59 @@ class GLViewer(GLViewerCommon):
         self.m_menu.Append(Menu_Zoom_5x,   "z&oom .5x\th")
         self.m_menu.Append(Menu_ZoomReset, "zoom &reset\t0")
         self.m_menu.Append(Menu_ZoomCenter,"zoom &center\t9")
-        self.m_menu.Append(Menu_Zoom1,"zoom &1\t1")
         self.m_menu.Append(Menu_chgOrig, "c&hangeOrig\to")
         self.m_menu.Append(Menu_Reload, "reload\tr")
         #20051116 self.m_menu.Append(Menu_Color, "change ColorMap")
-        self.m_menu.AppendMenu(wx.NewId(), "color map\tc", self.m_menu_colmap)
+        if wx.version().startswith('3') and not wx.version().endswith('(phoenix)'):
+            self.m_menu.AppendMenu(wx.NewId(), "color map\tc", self.m_menu_colmap)
+            self.m_menu.AppendMenu(wx.NewId(), "save", self.m_menu_save)
+        else: # 4
+            self.m_menu.Append(wx.NewId(), "color map\tc", self.m_menu_colmap)
+            self.m_menu.Append(wx.NewId(), "save", self.m_menu_save)
 
-        
         #20050726 self.m_menu.Append(Menu_Save, "save2d")
-        self.m_menu.AppendMenu(wx.NewId(), "save", self.m_menu_save)
         #self.m_menu.Append(Menu_Save3d, "save3d")
         self.m_menu.Append(Menu_aspectRatio, "change aspect ratio")
         self.m_menu.Append(Menu_rotate, "display rotated...")
         self.m_menu.Append(Menu_noGfx, "hide all gfx\tb", '',wx.ITEM_CHECK)
 
-        wx.EVT_MENU(self, Menu_ZoomCenter, self.OnCenter)
-        wx.EVT_MENU(self, Menu_ZoomOut, self.OnZoomOut)
-        wx.EVT_MENU(self, Menu_ZoomIn, self.OnZoomIn)
-        wx.EVT_MENU(self, Menu_Zoom2x,     self.OnMenu)
+
+        #20171225-PY2to3 deprecation warning 
+        self.Bind(wx.EVT_MENU, self.OnCenter,          id=Menu_ZoomCenter)
+        self.Bind(wx.EVT_MENU, self.OnZoomOut,         id=Menu_ZoomOut)
+        self.Bind(wx.EVT_MENU, self.OnZoomIn,          id=Menu_ZoomIn)
+        self.Bind(wx.EVT_MENU, self.OnMenu,            id=Menu_Zoom2x)
+        self.Bind(wx.EVT_MENU, self.OnMenu,            id=Menu_Zoom_5x)
+        self.Bind(wx.EVT_MENU, self.doReset,           id=Menu_ZoomReset)
+        self.Bind(wx.EVT_MENU, self.OnColor,           id=Menu_Color)
+        self.Bind(wx.EVT_MENU, self.OnReload,          id=Menu_Reload)
+        self.Bind(wx.EVT_MENU, self.OnChgOrig,         id=Menu_chgOrig)
+        self.Bind(wx.EVT_MENU, self.OnSave,            id=Menu_Save)
+        self.Bind(wx.EVT_MENU, self.OnSaveScreenShort, id=Menu_SaveScrShot)
+        self.Bind(wx.EVT_MENU, self.OnSaveClipboard,   id=Menu_SaveClipboard)
+        self.Bind(wx.EVT_MENU, self.OnAssign,          id=Menu_Assign)
+        self.Bind(wx.EVT_MENU, self.OnAspectRatio,     id=Menu_aspectRatio)
+        self.Bind(wx.EVT_MENU, self.OnRotate,          id=Menu_rotate)
+        self.Bind(wx.EVT_MENU, self.OnNoGfx,           id=Menu_noGfx)
+
+        
+        #wx.EVT_MENU(self, Menu_ZoomCenter, self.OnCenter)
+        #wx.EVT_MENU(self, Menu_ZoomOut, self.OnZoomOut)
+        #wx.EVT_MENU(self, Menu_ZoomIn, self.OnZoomIn)
+        #wx.EVT_MENU(self, Menu_Zoom2x,     self.OnMenu)
         #wx.EVT_MENU(self, Menu_ZoomCenter, self.OnMenu)
-        wx.EVT_MENU(self, Menu_Zoom_5x,    self.OnMenu)
-        wx.EVT_MENU(self, Menu_ZoomReset,  self.doReset) # OnMenu)
-        wx.EVT_MENU(self, Menu_Zoom1,  lambda ev: self.zoom(1)) # OnMenu)
-        wx.EVT_MENU(self, Menu_Color,      self.OnColor)
-        wx.EVT_MENU(self, Menu_Reload,      self.OnReload)
-        wx.EVT_MENU(self, Menu_chgOrig,      self.OnChgOrig)
-        wx.EVT_MENU(self, Menu_Save,      self.OnSave)
-        wx.EVT_MENU(self, Menu_SaveScrShot,      self.OnSaveScreenShort)
-        wx.EVT_MENU(self, Menu_SaveClipboard,    self.OnSaveClipboard)
-        wx.EVT_MENU(self, Menu_Assign,      self.OnAssign)
-        wx.EVT_MENU(self, Menu_aspectRatio,      self.OnAspectRatio)
-        wx.EVT_MENU(self, Menu_rotate,      self.OnRotate)
-        wx.EVT_MENU(self, Menu_noGfx,      self.OnNoGfx)
+        #wx.EVT_MENU(self, Menu_Zoom_5x,    self.OnMenu)
+        #wx.EVT_MENU(self, Menu_ZoomReset,  self.doReset) # OnMenu)
+        #wx.EVT_MENU(self, Menu_Color,      self.OnColor)
+        #wx.EVT_MENU(self, Menu_Reload,      self.OnReload)
+        #wx.EVT_MENU(self, Menu_chgOrig,      self.OnChgOrig)
+        #wx.EVT_MENU(self, Menu_Save,      self.OnSave)
+        #wx.EVT_MENU(self, Menu_SaveScrShot,      self.OnSaveScreenShort)
+        #wx.EVT_MENU(self, Menu_SaveClipboard,    self.OnSaveClipboard)
+        #wx.EVT_MENU(self, Menu_Assign,      self.OnAssign)
+        #wx.EVT_MENU(self, Menu_aspectRatio,      self.OnAspectRatio)
+        #wx.EVT_MENU(self, Menu_rotate,      self.OnRotate)
+        #wx.EVT_MENU(self, Menu_noGfx,      self.OnNoGfx)
 
     def InitGL(self):
         #        // Enable back face culling of polygons based upon their window coordinates.
@@ -255,7 +285,7 @@ class GLViewer(GLViewerCommon):
         self.picTexRatio_x = float(self.pic_nx) / self.tex_nx
         self.picTexRatio_y = float(self.pic_ny) / self.tex_ny
 
-        self.SetCurrent() # 20041014
+        self.SetCurrent(self.context) # 20041014 # 20141124
 
         if not self.m_gllist:
             self.m_gllist = glGenLists( 2 )
@@ -297,7 +327,7 @@ class GLViewer(GLViewerCommon):
 
         else:
             self.error = "unsupported data mode"
-            raise ValueError, self.error
+            raise ValueError(self.error)
 
 
         cornerOffsetX = -.5
@@ -490,6 +520,8 @@ class GLViewer(GLViewerCommon):
     def OnPaint(self, event):
         try:
             dc = wx.PaintDC(self)
+        except wx._core.wxAssertionError:# 20201122 MacOS Big Sur
+            pass
         except:
             # this windows is dead !?
             return
@@ -503,11 +535,12 @@ class GLViewer(GLViewerCommon):
         if self.error:
             return
         #//seb check PrepareDC(dc)
-        if not self.GetContext():
+        if 0:#not self.GetContext():
+            testing="""
             print "OnPaint GetContext() error"
-            return
+            return"""
         
-        self.SetCurrent()
+        self.SetCurrent(self.context) # 20141124 Cocoa
   
         if not self.m_init:
             self.InitGL()
@@ -536,7 +569,7 @@ class GLViewer(GLViewerCommon):
                 import traceback as tb
                 tb.print_exc(limit=None, file=None)
                 self.error = "error with self.defGlList()"
-                print "ERROR:", self.error
+                print("ERROR:", self.error)
             self.m_gllist_Changed = False
 
         if self.m_imgChanged:
@@ -574,10 +607,10 @@ class GLViewer(GLViewerCommon):
                     f = 1
                 except:
                     import sys
-                    print >>sys.stderr, "  ### ### cought exception in transfer function:  #### " 
+                    print("  ### ### cought exception in transfer function:  #### ", file=sys.stderr) 
                     import traceback
                     traceback.print_exc()
-                    print >>sys.stderr, "  ### ### cought exception in transfer function:  #### " 
+                    print("  ### ### cought exception in transfer function:  #### ", file=sys.stderr) 
                     data = self.m_imgArr
                     fBias = 0
                     f = 1
@@ -618,7 +651,7 @@ class GLViewer(GLViewerCommon):
             elif not self.transferf:
                 # handle non gfx-card dtypes
                 if data.dtype.type in (N.float64,
-                                       N.int32, N.uint32,N.int64, N.uint64, N.int0):
+                                       N.int32, N.uint32,N.int64, N.uint64, int):#N.int0):
                     data = data.astype(N.float32)
                 
                 srange =  float(self.m_maxHistScale - self.m_minHistScale)
@@ -662,10 +695,19 @@ class GLViewer(GLViewerCommon):
             #self.itSize  = itSize #for debugging
             
             if self.colMap is not None:
+                glPixelTransferi(GL_MAP_COLOR, True)
+                # this part may be different depending on GL versions
+                # here is __version__ = 3.0.2 on mac 10.7 py2.6
+                mapsize = len(self.colMap[0])
+                glPixelMapfv(GL_PIXEL_MAP_R_TO_R, mapsize, self.colMap[0] )
+                glPixelMapfv(GL_PIXEL_MAP_G_TO_G, mapsize, self.colMap[1] )
+                glPixelMapfv(GL_PIXEL_MAP_B_TO_B, mapsize, self.colMap[2] )
+                original="""
+                
                 glPixelTransferi(GL_MAP_COLOR, True);
                 glPixelMapfv(GL_PIXEL_MAP_R_TO_R, self.colMap[0] )
                 glPixelMapfv(GL_PIXEL_MAP_G_TO_G, self.colMap[1] )
-                glPixelMapfv(GL_PIXEL_MAP_B_TO_B, self.colMap[2] )
+                glPixelMapfv(GL_PIXEL_MAP_B_TO_B, self.colMap[2] )"""
             else:
                 glPixelTransferi(GL_MAP_COLOR, False);
                 # //printf("%8d %9f \n", -min, f)
@@ -699,7 +741,7 @@ class GLViewer(GLViewerCommon):
                                 format,GL_UNSIGNED_SHORT, dataString)
             else:
                 self.error = "unsupported data mode"
-                raise ValueError, self.error
+                raise ValueError(self.error)
             
             self.m_imgChanged = False
 
@@ -779,7 +821,7 @@ class GLViewer(GLViewerCommon):
         elif o == 8:
             self.setOriginLeftBottom(1)
         else:
-            print "FixMe: OnChgOrig"
+            print("FixMe: OnChgOrig")
         
     def OnColor(self, event=None):
         #Windows: works all fine when accel-key used WITH ALT # print "DEBUG: OnColor", self
@@ -790,12 +832,16 @@ class GLViewer(GLViewerCommon):
         elif self.colMap_menuIdx == 2:
             self.cmblackbody()
         elif self.colMap_menuIdx == 3:
-            self.cmwheel()
+            self.cmmagma()
         elif self.colMap_menuIdx == 4:
-            self.cmwheel(10)
+            self.cmviridis()
         elif self.colMap_menuIdx == 5:
-            self.cmGrayMinMax()
+            self.cmwheel()
+        #elif self.colMap_menuIdx == (4+1):
+        #    self.cmwheel(10)
         elif self.colMap_menuIdx == 6:
+            self.cmGrayMinMax()
+        elif self.colMap_menuIdx == 7:
             self.cmnone()
 #         if self.colMap != None:
 #             self.cmnone()
@@ -803,7 +849,7 @@ class GLViewer(GLViewerCommon):
 #             self.cmcol()
 
         self.colMap_menuIdx += 1
-        self.colMap_menuIdx %= 7
+        self.colMap_menuIdx %= (7+1)
         # 20040713 now in cmWheel,cmLog,...   self.updateHistColMap()
 
         
@@ -819,10 +865,10 @@ class GLViewer(GLViewerCommon):
 
     def OnMenuColMap(self, ev):
         menuIdx = Menu_ColMap.index(ev.GetId())
-        if menuIdx == 7:
+        if menuIdx == 8:#7:
             self.gammawin = GammaPopup(self)
             self.gammawin.Show()
-            self.colMap_menuIdx = 7-1
+            #self.colMap_menuIdx = 8-1#7-1
             return
         elif menuIdx == 0:
             self.cmnone()
@@ -833,13 +879,17 @@ class GLViewer(GLViewerCommon):
         elif menuIdx == 3:
             self.cmblackbody()
         elif menuIdx == 4:
-            self.cmwheel()
+            self.cmmagma()
         elif menuIdx == 5:
-            self.cmwheel(10)
+            self.cmviridis()
         elif menuIdx == 6:
+            self.cmwheel()
+        #elif menuIdx == 5+1:
+            #self.cmwheel(10)
+        elif menuIdx == 7:
             self.cmGrayMinMax()
 
-        self.colMap_menuIdx = (menuIdx+1)%7
+        self.colMap_menuIdx = (menuIdx+1)%8#7
         
 
     
@@ -869,6 +919,9 @@ class GLViewer(GLViewerCommon):
     spectrum = ["darkred", "red", "orange", "yellow", "green", "blue",
                 "darkblue", "violet"]
     blackbody = ["black", "darkred", "orange", "yellow", "white"]
+        
+    magma = ["black","violet", "orange", "white"]#"magenta", "orange", "white"] # rather it is plasma
+    viridis = ["violet", 'darkblue', 'green', 'yellow']
     redgreen = ["red", "darkred", "black", "darkgreen", "green"]
     greenred = ["green", "darkgreen", "black", "darkred", "red"]
     twocolorarray = ["green", "yellow", "red"]
@@ -934,7 +987,7 @@ class GLViewer(GLViewerCommon):
         def s2c(s):
             mat = col_regex.match(s)
             if mat:
-                return N.array( map(int, mat.groups()),dtype=N.float32 ) / 255.
+                return N.array( list(map(int, mat.groups())),dtype=N.float32 ) / 255.
             else:
                 return N.array( self.colnames[s], dtype=N.float32 ) / 255.
 
@@ -974,8 +1027,37 @@ class GLViewer(GLViewerCommon):
             self.colMap[:, c] = acc
             #      else:
             #          print "** debug ** c == self.cm_size ..."
-    
+        self.original_colMap = self.colMap.copy()
+        self.setGamma()
+
+    def setGamma(self):
+        if not hasattr(self, 'original_colMap') or self.colMap is None:
+            self.cmgray(self.gamma)
+            return
+        #else:
+        #    self.original_colMap = self.colMap.copy()
+        if self.gamma != 1:
+            if self.original_colMap.min() > 0:
+                self.colMap[:] = self.original_colMap ** self.gamma
+            else:
+                self.colMap[:] = N.clip(self.original_colMap, 0, None) ** self.gamma
+
         ##########3viewerRedraw(cam)
+    def loadColMap(self, name='magma'):
+        try:
+            raise ImportError
+            from matplotlib import pyplot as P
+            self.colMap = N.array(P.cm.get_cmap(name).colors).T
+        except ImportError:
+            try:
+                import os
+                self.colMap = N.load(os.path.join(os.path.dirname(__file__), '%s.npy' % name))
+            except:
+                pass
+        self.original_colMap = self.colMap.copy()
+        self.setGamma()
+        self.changeHistogramScaling()
+        self.updateHistColMap()
     
     def cmgrey(self, reverse=0):
         self.cms(self.grey, reverse)
@@ -989,6 +1071,12 @@ class GLViewer(GLViewerCommon):
         self.cms(self.blackbody, reverse)
         self.changeHistogramScaling()
         self.updateHistColMap()
+    def cmmagma(self, reverse=0):
+        self.loadColMap(name='magma')
+        
+    def cmviridis(self, reverse=0):
+        self.loadColMap(name='viridis')
+        
     def cmwheel(self, cycles=1):
         self.cm_size = 256 ###### non omx
         self.colMap = N.empty(shape=(3, self.cm_size), dtype=N.float32)
@@ -1041,7 +1129,7 @@ class GLViewer(GLViewerCommon):
     
 def view(array, title=None, size=None, parent=None):
     if len(array.shape) != 2:
-        raise ValueError, "array must be of dimension 2"
+        raise ValueError("array must be of dimension 2")
 
     ### size = (400,400)
     if size is None:

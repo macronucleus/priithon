@@ -1,6 +1,5 @@
 """Priithon's MOSAIC viewer"""
-from __future__ import absolute_import
-
+from __future__ import print_function
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -222,7 +221,7 @@ class GLViewer(wxgl.GLCanvas):
                              GL_LUMINANCE,GL_UNSIGNED_SHORT, None)
             else:
                 self.error = "unsupported data mode"
-                raise ValueError, self.error
+                raise ValueError(self.error)
 
     def defGlList(self):
         pass
@@ -381,7 +380,7 @@ class GLViewer(wxgl.GLCanvas):
         """save Mosaic size/pos/scale info in baseFn.txt
            save all images into baseFn_xx.mrc
         """
-        from .all import Mrc, U
+        from Priithon.all import Mrc, U
 
         if baseFn is None:
             from .usefulX import FN
@@ -404,7 +403,7 @@ class GLViewer(wxgl.GLCanvas):
             #20070126 m.hdr('mmm1')[:] = tuple(self.m_imgScaleMM[i]) + (1,)
             #20070126 m.flush()
             #20070126 m.close()
-            d    = tuple(self.m_imgSizeArr[i] / N.array((self.m_imgArrL[i].shape))[::1]) + (1,)
+            d    = tuple(self.m_imgSizeArr[i] / N.array((self.m_imgArrL[i].shape), dtype=N.float32)[::1]) + (1,)
             zxy0 = (0,) + tuple(self.m_imgPosArr[i]) 
             Mrc.save(self.m_imgArrL[i],
                      "%s_%02d.mrc" % (baseFn, i),
@@ -421,7 +420,7 @@ class GLViewer(wxgl.GLCanvas):
 
            if baseFn end on '.txt' - that suffix gets ignored
         """
-        from .all import Mrc, U
+        from Priithon.all import Mrc, U
 
         if baseFn is None:
             from .usefulX import FN
@@ -667,7 +666,7 @@ class GLViewer(wxgl.GLCanvas):
                          GL_LUMINANCE,GL_UNSIGNED_SHORT, None)
         else:
             self.error = "unsupported data mode"
-            raise ValueError, self.error
+            raise ValueError(self.error)
 
         if not holdBackUpdate:
             self.m_loadImgsToGfxCard += [idx]
@@ -781,7 +780,7 @@ class GLViewer(wxgl.GLCanvas):
         a=N.array([N.minimum.reduce(posA),
                    N.maximum.reduce(posA+sizA),
                    ])
-        from .all import U
+        from Priithon.all import U
 
         MC = N.array([0.5, 0.5]) # mosaic viewer's center (0.5, 0.5)
         a -= MC
@@ -847,7 +846,7 @@ class GLViewer(wxgl.GLCanvas):
             return
         #//seb check PrepareDC(dc)
         if not self.GetContext():
-            print "OnPaint GetContext() error"
+            print("OnPaint GetContext() error")
             return
         
         self.SetCurrent()
@@ -866,7 +865,7 @@ class GLViewer(wxgl.GLCanvas):
         if self.m_imgL_changed:
             self.InitTex()
             self.m_positionsChanged = True
-            self.m_loadImgsToGfxCard += range(self.m_nImgs)
+            self.m_loadImgsToGfxCard += list(range(self.m_nImgs))
             self.m_imgL_changed = False
 
 
@@ -889,7 +888,7 @@ class GLViewer(wxgl.GLCanvas):
                 import traceback as tb
                 tb.print_exc(limit=None, file=None)
                 self.error = "error with self.defGlList()"
-                print "ERROR:", self.error
+                print("ERROR:", self.error)
             self.m_gllist_Changed = False
 
         if len( self.m_loadImgsToGfxCard ):
@@ -960,7 +959,7 @@ class GLViewer(wxgl.GLCanvas):
                     else:
                         glPixelTransferi(GL_MAP_COLOR, False)
                 else:
-                    print "mmviewer-debug12: min==max: self.m_imgScaleMM[i]", self.m_imgScaleMM[i]
+                    print("mmviewer-debug12: min==max: self.m_imgScaleMM[i]", self.m_imgScaleMM[i])
                     
                 if bugXiGraphics: #20070126  or (bugOSX1036 and img.dtype.type == N.float32): #20060221
                     itSize = 1
@@ -991,7 +990,7 @@ class GLViewer(wxgl.GLCanvas):
                                     GL_LUMINANCE,GL_UNSIGNED_SHORT, imgString)
                 else:
                     self.error = "unsupported data mode"
-                    raise ValueError, self.error
+                    raise ValueError(self.error)
 
             self.m_loadImgsToGfxCard = []
 
@@ -1068,7 +1067,7 @@ class GLViewer(wxgl.GLCanvas):
         #print "***1 ", self.GetSizeTuple()
         #print "***2 ", self.GetClientSizeTuple()
         if self.m_w <=0 or self.m_h <=0:
-            print "view.OnSize self.m_w <=0 or self.m_h <=0", self.m_w, self.m_h
+            print("view.OnSize self.m_w <=0 or self.m_h <=0", self.m_w, self.m_h)
             return
 
         self.doOnFrameChange()
@@ -1084,8 +1083,8 @@ class GLViewer(wxgl.GLCanvas):
             fac = self.m_wheelFactor ** (rot*zoomSpeed) # 1.189207115002721 # >>> 2 ** (1./4)
             self.m_scale *= fac
             #self.doCenter()
-            w2 = self.m_w/2
-            h2 = self.m_h/2
+            w2 = self.m_w/2.
+            h2 = self.m_h/2.
             self.m_x0 = w2 - (w2-self.m_x0)*fac
             self.m_y0 = h2 - (h2-self.m_y0)*fac
             self.m_zoomChanged = True
@@ -1116,7 +1115,7 @@ class GLViewer(wxgl.GLCanvas):
         self._onMouseEvt = ev  # be careful - only use INSIDE a handler function that gets call from here
         x0,y0, s,a = self.m_x0, self.m_y0,self.m_scale,self.m_aspectRatio
         x,y = ev.m_x, self.m_h-ev.m_y
-        xEff,yEff = (x-x0)/s ,  (y-y0)/(s*a) # float !
+        xEff,yEff = (x-x0)/float(s) ,  (y-y0)/float(s*a) # float !
 
         midButt = ev.MiddleDown() or (ev.LeftDown() and ev.AltDown())
         midIsButt = ev.MiddleIsDown() or (ev.LeftIsDown() and ev.AltDown())
@@ -1133,8 +1132,8 @@ class GLViewer(wxgl.GLCanvas):
 
                 fac = self.m_zoomDragFactor ** (dy)
                 self.m_scale *= fac
-                w2 = self.m_w/2
-                h2 = self.m_h/2
+                w2 = self.m_w/2.
+                h2 = self.m_h/2.
                 self.m_x0 = w2 - (w2-self.m_x0)*fac
                 self.m_y0 = h2 - (h2-self.m_y0)*fac
                 self.m_zoomChanged = True
@@ -1189,16 +1188,16 @@ class GLViewer(wxgl.GLCanvas):
         if id == Menu_Zoom2x:
             fac = 2.
             self.m_scale *= fac
-            w2 = self.m_w/2
-            h2 = self.m_h/2
+            w2 = self.m_w/2.
+            h2 = self.m_h/2.
             self.m_x0 = w2 - (w2-self.m_x0)*fac
             self.m_y0 = h2 - (h2-self.m_y0)*fac
             self.m_zoomChanged = True
         elif id == Menu_Zoom_5x:
             fac = .5
             self.m_scale *= fac
-            w2 = self.m_w/2
-            h2 = self.m_h/2
+            w2 = self.m_w/2.
+            h2 = self.m_h/2.
             self.m_x0 = w2 - (w2-self.m_x0)*fac
             self.m_y0 = h2 - (h2-self.m_y0)*fac
             self.m_zoomChanged = True
@@ -1218,8 +1217,8 @@ class GLViewer(wxgl.GLCanvas):
         x = self.mousePos_remembered_x
         y = self.mousePos_remembered_y
 
-        w2 = self.m_w/2
-        h2 = self.m_h/2
+        w2 = self.m_w/2.
+        h2 = self.m_h/2.
         self.m_x0 += (w2-x)*self.m_scale
         self.m_y0 += (h2-y)*self.m_scale
         self.m_zoomChanged = True
@@ -1284,7 +1283,7 @@ class GLViewer(wxgl.GLCanvas):
         def s2c(s):
             mat = col_regex.match(s)
             if mat:
-                return N.array( map(int, mat.groups()), dtype=N.float32 ) /255.
+                return N.array( list(map(int, mat.groups())), dtype=N.float32 ) /255.
             else:
                 return N.array( self.colnames[s], dtype=N.float32 ) /255.
 
@@ -1305,14 +1304,14 @@ class GLViewer(wxgl.GLCanvas):
 
             # print "===> ", i, colseq[i], colseq[i+1], "  ", rgb0, rgb1, "   d: ", delta
 
-            sub_n_f = self.cm_size / (n-1.0)
-            sub_n   = self.cm_size / (n-1)
+            sub_n_f = self.cm_size / float(n-1.0)
+            sub_n   = self.cm_size / float(n-1)
             # print "*****    ", c, "  ", i*sub_n_f, " ", i*sub_n,  " ++++ ", int( i*sub_n_f+.5 )
 
             if int( i*sub_n_f+.5 ) > c:
                 sub_n += 1             # this correct rounding - to get
                 #              correct total number of entries
-            delta_step = delta / sub_n
+            delta_step = delta / float(sub_n)
             for i in range(sub_n):
                 # print c, acc
                 self.colMap[:, c] = acc
@@ -1329,15 +1328,15 @@ class GLViewer(wxgl.GLCanvas):
     
     def cmgrey(self, reverse=0):
         self.cms(self.grey, reverse)
-        self.m_loadImgsToGfxCard += range(self.m_nImgs)
+        self.m_loadImgsToGfxCard += list(range(self.m_nImgs))
         self.Refresh(0)
     def cmcol(self, reverse=0):
         self.cms(self.spectrum3, reverse)
-        self.m_loadImgsToGfxCard += range(self.m_nImgs)
+        self.m_loadImgsToGfxCard += list(range(self.m_nImgs))
         self.Refresh(0)
     def cmnone(self):
         self.colMap = None
-        self.m_loadImgsToGfxCard += range(self.m_nImgs)
+        self.m_loadImgsToGfxCard += list(range(self.m_nImgs))
         self.Refresh(0)
     def cmgray(self, gamma=1):
         """set col map to gray"""
@@ -1348,11 +1347,11 @@ class GLViewer(wxgl.GLCanvas):
         else:
             n = self.cm_size = 512
             gamma = float(gamma)
-            wmax = 0 + (1 - 0) * ((n - 0) / (1 - 0)) ** gamma
+            wmax = 0 + (1 - 0) * ((n - 0) / (1. - 0)) ** gamma
             self.colMap = N.empty(shape = (3,n), dtype = N.float32)
             self.colMap[:] = \
-                  (0 + (1 - 0) * ((N.arange(n) - 0) / (1 - 0)) **gamma) / wmax
-        self.m_loadImgsToGfxCard += range(self.m_nImgs)
+                  (0 + (1 - 0) * ((N.arange(n) - 0) / (1. - 0)) **gamma) / wmax
+        self.m_loadImgsToGfxCard += list(range(self.m_nImgs))
         self.Refresh(0)
     
 def mview(arrayL=None, imgPosArr=None, imgSizeArr=None,

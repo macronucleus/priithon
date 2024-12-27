@@ -1,8 +1,3 @@
-"""
-Priithon spreadsheet viewer for arrays
-"""
-from __future__ import absolute_import
-
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
 
@@ -125,7 +120,7 @@ class HugeTableGrid(wx.grid.Grid):
 
 class ArrayGrid(wx.Frame):
     def __init__(self, parent, arr, title):
-        wx.Frame.__init__(self, parent, -1, title)
+        wxFrame.__init__(self, parent, -1, title)
         global grid
         grid = HugeTableGrid(self, arr)
 
@@ -146,7 +141,7 @@ def gridview0(arr, title="grid viewer"):
     global frame
 
     if len(arr.shape) != 2:
-        raise ValueError, "array must be of dimension 2"
+        raise ValueError("array must be of dimension 2")
     frame = ArrayGrid(None, arr, title)
     frame.SetSize((600,300))
     frame.Show(True)
@@ -166,7 +161,7 @@ def gridview(array, title="2d viewer", originLeftBottom=1):
         array = array.view()
         array.shape = (-1,len(array))
     if len(array.shape) != 2:
-        raise ValueError, "array must be of dimension 2"
+        raise ValueError("array must be of dimension 2")
 
     ###########size = (400,400)
     frame = wx.Frame(None, -1, title)
