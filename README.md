@@ -16,17 +16,16 @@ While the focus here is on algorithm development, it makes it very easy to devel
   GPL License (see License.md, even if  you don't install it, you can still use Fourier transform using numpy)
 * `imgio` (optional for reading file formats other than the dv/mrc format)
 
-Use conda environments in `envs` directory.
-To create a new environment:
-`conda create -n [env_name] --file env_name.txt`
-To add to the existing environment:
-`conda install --name [env_name] --file env_name.txt`
+To install, use conda environments in `envs` directory.  
+To create a new environment:  
+`conda create -n [env_name] --file env_name.txt`  
+To add to the existing environment:  
+`conda install --name [env_name] --file env_name.txt`  
 
-Or this may work for most systems:
-`conda create -n env_name numpy scipy wxpython pyopengl wxmplot pyfftw
-tifffile nd2 czifile oiffile readlif`
-Then install imgio:
-`pip install git+http://github.com/macronucleus/imgio`
+Then install imgio:  
+`pip install git+http://github.com/macronucleus/imgio@main`  
+Then install Priithon:  
+`pip install git+http://github.com/macronucleus/priithon@master`  
 
 # Target audience
 While Priithon is mainly used (by myself) as a daily work horse for looking at microscope images of some cell nuclei or other biology, there are many aspects that are not primarily geared for my own benefit:
