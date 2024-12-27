@@ -30,7 +30,7 @@ Install imgio:
 Then install Priithon:  
 `$ pip install git+http://github.com/macronucleus/priithon@master`  
 
-After installation, type on the commandline:  
+After installation, type on the command line:  
 `$ priithon`
 
 # Target audience
