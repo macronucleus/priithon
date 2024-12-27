@@ -1,9 +1,7 @@
 # Priithon
-Priithon is a platform for image analysis and image analysis algorithm development.
+Priithon is a Python platform for image analysis and image analysis algorithm development.
 
 While the focus here is on algorithm development, it makes it very easy to develop applications that would not require any programming skills, i.e. making "end user" biologist's or astronomer's applications.
-
-#Priithon is easy to install: download a single zip archive and unpack. (It requires Python to be installed. More info is on the PriithonWiki.(FIXME LINK))
 
 # Installation
 -----------------------------
