@@ -23,7 +23,9 @@ To create a new environment:
 To add to the existing environment:  
 `$ conda install --name [env_name] --file env_name.txt`  
 
-Then install imgio:  
+After activating the environment by typing  
+`$ conda activate [env_name]`
+Install imgio:  
 `$ pip install git+http://github.com/macronucleus/imgio@main`  
 Then install Priithon:  
 `$ pip install git+http://github.com/macronucleus/priithon@master`  
