@@ -5,8 +5,9 @@ While the focus here is on algorithm development, it makes it very easy to devel
 
 #Priithon is easy to install: download a single zip archive and unpack. (It requires Python to be installed. More info is on the PriithonWiki.(FIXME LINK))
 
-# Dependency
+# Installation
 -----------------------------
+Dependencies  
 * `numpy`
 * `scipy`
 * `wxPython` (optional for GUI)
@@ -18,14 +19,17 @@ While the focus here is on algorithm development, it makes it very easy to devel
 
 To install, use conda environments in `envs` directory.  
 To create a new environment:  
-`conda create -n [env_name] --file env_name.txt`  
+`$ conda create -n [env_name] --file env_name.txt`  
 To add to the existing environment:  
-`conda install --name [env_name] --file env_name.txt`  
+`$ conda install --name [env_name] --file env_name.txt`  
 
 Then install imgio:  
-`pip install git+http://github.com/macronucleus/imgio@main`  
+`$ pip install git+http://github.com/macronucleus/imgio@main`  
 Then install Priithon:  
-`pip install git+http://github.com/macronucleus/priithon@master`  
+`$ pip install git+http://github.com/macronucleus/priithon@master`  
+
+After installation, type on the commandline:  
+`$ priithon`
 
 # Target audience
 While Priithon is mainly used (by myself) as a daily work horse for looking at microscope images of some cell nuclei or other biology, there are many aspects that are not primarily geared for my own benefit:
