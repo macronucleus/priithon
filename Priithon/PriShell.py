@@ -1,13 +1,12 @@
 """PyShell is a python shell application."""
-from __future__ import absolute_import
 #seb: PriShell
 
 # The next two lines, and the other code below that makes use of
 # ``__main__`` and ``original``, serve the purpose of cleaning up the
 # main namespace to look as much as possible like the regular Python
 # shell environment.
-#20091208-PyFlakes import __main__
-#20090806 original = __main__.__dict__.keys()
+import __main__
+original = list(__main__.__dict__.keys())
 
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
 __license__ = "BSD license - see LICENSE file"
@@ -15,8 +14,7 @@ __license__ = "BSD license - see LICENSE file"
 #seb __cvsid__ = "$Id: PyShell.py,v 1.7 2004/03/15 13:42:37 PKO Exp $"
 #seb __revision__ = "$Revision: 1.7 $"[11:-2]
 
-#20091208-PyFlakes import wx
-
+import wx
 
 """
 The main() function needs to handle being imported, such as with the
@@ -28,7 +26,7 @@ pyshell script that wxPython installs:
     main()
 """
 
-def main(startMainLoop=True):
+def main():
     """The main function for the PyShell program."""
     import wx
 
@@ -37,22 +35,19 @@ def main(startMainLoop=True):
         """PyShell standalone application."""
 
         def OnInit(self):
-            import wx,sys,os
-            #from .py import shell
-            # absolute import
-            # ValueError: Attempted relative import in non-package
-            # NOTE: this is where Priithon is beeing started - i.e. we are not yet "inside" the Priithon module
-            from Priithon.py import shell
+            import wx,sys
+            from wx.py import shell
+            from Priithon import shell
+            introText=' !!! Welcome to Priithon !!! \n'
+            #self.frame = shell.ShellFrame(
+            self.frame = shell.PriShellFrame(introText=introText,
+                title="priithon on %s" % wx.GetHostName())#, 20141127
 
-            wx.InitAllImageHandlers()
-            title = "priithon on %s (pid: %s)" % (
-                wx.GetHostName(), os.getpid())
-            print title # to know which terminal window belongs to which Priithon
-            self.frame = shell.ShellFrame(
-                title=title,
-                introText=' !!! Welcome to Priithon !!! \n'+
-                '(Python %s on %s)' % (sys.version.replace('\n',' '), sys.platform),
-                introStatus='Priithon: %s' % sys.argv)
+            intro = 'Priithon: %s' % sys.argv
+            self.frame.SetStatusText(intro.replace('\n', ', '))
+        
+            from Priithon import fileDropPopup
+            self.frame.shell.SetDropTarget( fileDropPopup.FileDropTarget(self.frame, self.frame.shell) )
             self.frame.SetSize((750, 525))
             self.frame.Show()
             self.SetTopWindow(self.frame)
@@ -69,7 +64,7 @@ def main(startMainLoop=True):
     #seb note: wee don't need to keep any of these 
 
     # Cleanup the main namespace, leaving the App class.
-    for key in md.keys():
+    for key in list(md.keys()):
         if key not in [
             #20071212 'App',
             '__author__',
@@ -98,18 +93,14 @@ def main(startMainLoop=True):
 
     # Create an application instance. (after adjusting sys.path!)
     sys.app = None # dummy to force Priithon.Y getting loaded
-    #20090811 app = App(0)
-    #       default: wx.App(redirect=False, filename=None, useBestVisual=False,
-    #                       clearSigInt=True)
-    app = App(redirect=False, filename=None, useBestVisual=False, 
-              clearSigInt=False)
-
+    app = App(0)
     #20070914 del md['App']
     # Add the application object to the sys module's namespace.
     # This allows a shell user to do:
     # >>> import sys
     # >>> sys.app.whatever
     sys.app = app
+        
 
     #seb: load Priithon modules
     #exec "from Priithon.all import *" in __main__.__dict__
@@ -122,6 +113,8 @@ def main(startMainLoop=True):
         wx.MessageBox(traceback.format_exc(), 
                       "Exception while Priithon Startup", 
                       wx.ICON_ERROR)
+    #20171225 p2to3 remove this part since GuiExceptionHook always appear
+    old="""
     try:
         # GUI part
         __main__.Y._setAutosavePath()
@@ -130,38 +123,14 @@ def main(startMainLoop=True):
         import traceback
         wx.MessageBox(traceback.format_exc(), 
                       "Exception while Priithon Startup", 
-                      wx.ICON_ERROR)
-    #import startupPriithon
+                      wx.ICON_ERROR)"""
 
-    # macs tends to have this OpenGL float-texture bug
-    # (all images (with pixelvals large compared to 1 appear black)
-    # this does not catch the case when Priithon runs
-    # remotely on Linux but uses a OSX X-display
-    # 
-    try:
-        if '__WXMAC__' in wx.PlatformInfo:
-            from Priithon import usefulX
-            usefulX._bugXiGraphics()
-    except:
-        import traceback
-        wx.MessageBox(traceback.format_exc(), 
-                      "Exception while Priithon Startup", 
-                      wx.ICON_ERROR)
-    try:
-        from Priithon import usefulX
-        usefulX._glutInit(argv=sys.argv)
-    except:
-        import traceback
-        wx.MessageBox(traceback.format_exc(), 
-                      "Exception while Priithon Startup", 
-                      wx.ICON_ERROR)
 
     del sys
 
     # Start the wxPython event loop.
     #del wx
-    if startMainLoop:
-        app.MainLoop()
-        print " * priithon ended. *" # to know when when the process has quit
+    app.MainLoop()
+
 if __name__ == '__main__':
     main()
