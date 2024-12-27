@@ -24,7 +24,7 @@ To add to the existing environment:
 `$ conda install --name [env_name] --file env_name.txt`  
 
 After activating the environment by typing  
-`$ conda activate [env_name]`
+`$ conda activate [env_name]`  
 Install imgio:  
 `$ pip install git+http://github.com/macronucleus/imgio@main`  
 Then install Priithon:  
