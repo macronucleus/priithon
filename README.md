@@ -15,11 +15,16 @@ Dependencies
   GPL License (see License.md, even if  you don't install it, you can still use Fourier transform using numpy)
 * `imgio` (optional for reading file formats other than the dv/mrc format)
 
-To install, use conda environments in `envs` directory.  
+To install, use conda environments in `envs` directory (contains pyFFTW).  
 To create a new environment:  
 `$ conda create -n [env_name] --file env_name.txt`  
 To add to the existing environment:  
 `$ conda install --name [env_name] --file env_name.txt`  
+
+Alternatively, you can install the dependencies for your platform manually like:  
+`$ conda create -n [env_name] -c conda-forge numpy scipy wxpython
+pyopengl wxmplot pillow 
+[pyfftw, tifffile, nd2, czifile, oiffile, readlif]`  
 
 After activating the environment by typing  
 `$ conda activate [env_name]`  
@@ -29,38 +34,98 @@ Then install Priithon:
 `$ pip install git+http://github.com/macronucleus/priithon@master`  
 
 After installation, type on the command line:  
-`$ priithon`
+`$ priithon`  
 
-# Target audience
-While Priithon is mainly used (by myself) as a daily work horse for looking at microscope images of some cell nuclei or other biology, there are many aspects that are not primarily geared for my own benefit:
+On the priithon shell, type the following commands to test if the
+installation was done successfully:  
+`>>> Y.test()`  
+`>>> Y.test2()`  
+If these commands does not work, then it is likely that wxpython
+version does not match even though the error message (appears on the
+command prompt in the back of the priithon shell) suggests some OpenGL
+problems.  
+Make sure to use the newest wxpython version from conda-forge or PIP.  
 
-- I want others to be able to install Priithon with minimal effort.
+# Usage
+-----------------------------
+Drag and drop your image file and select `View` to show
+multi-dimensional images, or `load and assign to var` to assign the
+image array to a python variable.  
 
-  This means:
-  - Simple one-step unpacking of a package file
-  - No system administrator permissions, or system knowledge, is required
+If you have assigned your image array to `a` for example, then you
+can:  
+`>>> Y.view(a) # view as gray scale`  
+`>>> b = Y.vd(0) # obtain image in the viewer as variable "b"`
+`>>> Y.view2(a) # view as multicolor`  
+`>>> a.header.pxlsize # shows pixel size of your image data`
+`>>> af = F.sfft(a) # full Fourier transform with origin corrected`   
+`>>> a = F.isfft(af) # full inverse Fourer transform with origin
+corrected`  
+`>>> af = F.rsfft(a) # real Fourier transform with origin corrected`  
+`>>> a = F.irsfft(af) # real inverse Fourer transform with origin
+corrected`  
+`>>> Y.ploty([0,1,2,3])`
 
-- It is easy to make custom application, that allow someone to perform advanced image analysis tasks, who does not have any prior training in programming or scripting
+# Short-cut keys for viewer
+-----------------------------
+- **a**: show /amplitudes/ of complex data set
 
-- It is the best platform I know, to teach (complete) programming novices some basic skills in scripting
-  - The Python programming language is generally considered clean and easy to learn
-  - The PyShell interface gives helpful function descriptions and pop-up lists of available functions as you type
+- **c**: cycle through many /color map/ modes:
+  - gray scale
+  - gray scale /logarithmic/
+  - rainbow red to blue
+  - /circular/ rainbow - good for phase images, where -PI is the same as +PI
+  - "heat like" black body
+  - "viridis"
+  - "magma"
+  - fast cycling rainbow with 0 black - good to see iso-conturs and
+    gradients
+	
+- **ctl (command) + c**: copy the image appeared on the viewer to the
+clipboad
 
-- Transparent modular multi-tier design going from interactive explorations to algorithms to scientist-oriented applications
- 1. Priithon sessions are (auto-) saved into text files, documenting every step of interactive explorations
- 2. Copy and paste into a Python-module file creates reusable functions
- 3. Functions are then fine-tuned into cleanly parametrized algorithms
- 4. Simple GUI interfaces visualize the set of "most-used" parameters and allow execution per mouse-click
- 5. Organizing multiple GUI windows with few-line setup functions into a "drag-into-Priithon-to-execute" script file
+- **f**: open new viewer showing the ("half-shaped",real-) fft(2d) of
+  the image
+  
+- **F**: open new viewer showing the inverse fft(2d) of the current
+  image (should be a "half-shaped" fft image)
+  
+- **g**: cycle through: no /grid/, one pixel grid, ten pixel grid
+  
+- **h**: auto histogram
 
-__Code license__: _New BSD License_
+- **o**:  cycle through 4 /origin/ modes:
+    - (0,0) at left bottom
+	- (0,0) at left top
+	- (0,0) at center ( for fft images )
+	- (0,0) at center &amp; "double width" ( for rfft images)
 
-__Labels__: _Python_, _numpy_, _SWIG_, _image analysis_, _multi dimensional_, _opengl_, _priithon_
+- **p**: show /phases/ of complex data set
 
-# Documentation (old)
- - [PriithonHandbook](https://rawgit.com/sebhaase/priithon/master/priithon_docs/PriithonHandbook.html)
- - [PriithonTutorials](https://rawgit.com/sebhaase/priithon/master/priithon_docs/PriithonTutorials.html)
- - [PriithonModules epydoc](https://rawgit.com/sebhaase/priithon/master/priithon_docs/PriithonEpydoc/index.html)
+- **v**: open new viewer showing "maximum intensity projection" (/"vomit"/) along z-axis
 
-# priithon
-Automatically exported from code.google.com/p/priithon
+- **x**: open new viewer showing x-z side on view
+
+- **y**: open new viewer showing y-z side on view
+
+- **0**: reset zoom to one pixel per data point and move image to left bottom in viewer frame
+
+- **9**: center image in viewer frame d "double" zoom - zoom in
+
+- **page up/down**: zoom in/out l toggle histogram with and with out /logarithmic/ /y/-axis
+
+- **Home**:
+
+- **arrow keys left,right**: walk through /z/ axis (or what ever the higher dimensions are for)
+
+- **arrow keys up, down**: walk through /t/ axis (or what ever the higher dimensions are for)
+
+- **arrow keys with <shift> OR <control>**: shift image by quarter of it's size in the respective direction
+
+- **Drag + <alt>**: Translate image
+
+# History
+Priithon was developmed by [Sebastian Hasse]
+(https://github.com/sebhaase/priithon) until around 2010.   
+Since then, I have continued to use it but only the functions most
+often used by me have been maintained.   
