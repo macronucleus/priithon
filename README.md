@@ -55,9 +55,9 @@ image array to a python variable.
 If you have assigned your image array to `a` for example, then you
 can:  
 `>>> Y.view(a) # view as gray scale`  
-`>>> b = Y.vd(0) # obtain image in the viewer as variable "b"`
+`>>> b = Y.vd(0) # obtain image in the viewer as variable "b"`  
 `>>> Y.view2(a) # view as multicolor`  
-`>>> a.header.pxlsize # shows pixel size of your image data`
+`>>> a.header.pxlsize # shows pixel size of your image data`  
 `>>> af = F.sfft(a) # full Fourier transform with origin corrected`   
 `>>> a = F.isfft(af) # full inverse Fourer transform with origin
 corrected`  
