@@ -327,21 +327,32 @@ def formatTWZYX(twzyxs, h, start=True):
             ret.append((dim, v))
     return ret
 
-def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,None), ifExists='overwrite'):
+def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,None), channel_ids=[], ifExists='overwrite'):
     """
     twzyx0: starting index (minus values accepcted)
     twzyx1: ending index (minus values accepcted)
+    channel_ids: if list of channel ids are supplied, it overwrite the twzyx0, twzyx1
 
     return output filename
     """
     dimstr = 'twzyx'
+
     twzyx0s = list(zip(dimstr, twzyx0))
     twzyx1s = list(zip(dimstr, twzyx1))
     with Reader(fn) as h:
+        if channel_ids and len(channel_ids) != h.nw:
+            twzyx0s[1] = list(twzyx0s[1])
+            twzyx1s[1] = list(twzyx1s[1])
+            twzyx0s[1][1] = 0
+            twzyx1s[1][1] = None
+        
         if not out:
             what0 = ''.join([s.lower() + str(v) for s,v in twzyx0s if v])
             what1 = ''.join([s.upper() + str(v) for s,v in twzyx1s if v is not None])
             whats = '_'.join((what0, what1))
+            if channel_ids and len(channel_ids) != h.nw:
+                wws = ''.join([str(c) for c in channel_ids])
+                whats += ('_w' + wws)
             base, ext = os.path.splitext(fn)
             if ext not in WRITABLE_FORMATS:
                 ext = '.dv'
@@ -352,7 +363,17 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
         twzyx0s = formatTWZYX(twzyx0s, h, start=True)
         twzyx1s = formatTWZYX(twzyx1s, h, start=False)
         ts = range(twzyx0s[0][1], twzyx1s[0][1])
-        ws = range(twzyx0s[1][1], twzyx1s[1][1])
+        if channel_ids and len(channel_ids) != h.nw:
+            waves = []
+            for wave in channel_ids:
+                if wave < 0:
+                    wave += h.nw
+                if wave >= h.nw:
+                    raise ValueError('channel %i does not exist' % wave)
+                waves.append(wave)
+            ws = waves
+        else:
+            ws = range(twzyx0s[1][1], twzyx1s[1][1])
         zs = range(twzyx0s[2][1], twzyx1s[2][1])
         ys = slice(twzyx0s[3][1], twzyx1s[3][1])
         xs = slice(twzyx0s[4][1], twzyx1s[4][1])

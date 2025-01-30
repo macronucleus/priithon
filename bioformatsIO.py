@@ -8,10 +8,14 @@ try:
 except ImportError:
     import generalIO, mrcIO, multitifIO
 
+COMMON=True
 try:
     from ..common import fntools, commonfuncs
-except (ValueError, ImportError):    
-    from common import fntools, commonfuncs
+except (ValueError, ImportError):
+    try:
+        from common import fntools, commonfuncs
+    except  (ValueError, ImportError):
+        COMMON=False
     
 import numpy as N
 
@@ -91,7 +95,7 @@ try:
         raise ValueError('pixeltype %s was not found' % pixeltype)
 
 except:
-    if not commonfuncs.main_is_frozen() and DO_WARN:
+    if COMMON and not commonfuncs.main_is_frozen() and DO_WARN:
         import traceback, warnings
         #traceback.print_exc()
         errs = traceback.format_exc()
@@ -810,7 +814,10 @@ class BioformatsWriter(AbstractReader, generalIO.GeneralWriter):
                     os.remove(self.fn)
                     removed = True
                 except OSError:
-                    self.fn = fntools.nextFN(self.fn)
+                    if COMMON:
+                        self.fn = fntools.nextFN(self.fn)
+                    else:
+                        raise RuntimeError('File exists %s' % self.fn)
                     i += 1
                 if i > 10:
                     raise RuntimeError('too many iteration to overwrite the last filename %s' % self.fn)

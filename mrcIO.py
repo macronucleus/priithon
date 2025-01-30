@@ -492,6 +492,36 @@ def _reshapeExtHdr(extHdr):
         extHdr = extHdr.reshape(extHdr.shape + (1,))
     return extHdr
 
+def makeHdrFromArr(ref, targetArr=None):
+    if not hasattr(ref, 'header'):
+        raise ValueError('The reference array must have the "header" attribute')
+
+    hdr = ref.header
+    
+    if targetArr is not None:
+        ny, nx = targetArr.shape[-2:]
+        nsecs = N.prod(targetArr.shape[:-2])
+        dtype = targetArr.dtype
+        if N.prod((ref.header.nt, ref.header.nz, ref.header.nw)) != nsecs:
+            print('Number of sections is different, please edit nt, nw, and Num')
+    else:
+        ny, nx = ref.header.ny, ref.header.nx
+        dtype = ref.dtype
+        print('Please edit nw, nt, Num, dtype if they are different in the target array')
+
+
+    
+    hdr = makeHdrFromDim(nx, ny, ref.header.nz, ref.header.nt, ref.header.nw, dtype=dtype, wave=ref.header.wave, imgSequence=0)
+
+    hdr.d[:] = ref.header.pxlsiz[::-1]
+
+    for i, meta in enumerate(ref.header.metadata.keys()):
+        if i < 10:
+            Mrc.setTitle(hdr, meta, i)
+
+    return hdr
+    
+
 
 #### imgManager ####
 def shapeFromNum(Num, NumWaves=1, NumTimes=1, imgSequence=1, squeeze=True):

@@ -278,10 +278,12 @@ class MultiTiffReader(generalIO.GeneralReader):
                     waves[w] = generalIO.WAVE_START - 50
         
         elif 'waves' in self.metadata:
-            if type(self.metadata['waves']) == int:
-                waves = [self.metadata['waves']]
-            else:
+            if isinstance(type(self.metadata['waves']), six.string_types):#type(self.metadata['waves']) in (int, float):
                 waves = [eval(w) for w in self.metadata['waves'].split(',')]
+            else:
+                waves = [self.metadata['waves']]
+            #else:
+            #    waves = [eval(w) for w in self.metadata['waves'].split(',')]
         return waves
 
                                 
@@ -380,7 +382,7 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                     isrgb = self.fp._storedshape[-1] in (3, 4)
                     #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
                     des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
-                    print('writeing metaata', self.metadata)
+                    #print('writing metaata', self.metadata)
                 elif self.style == 'ome':
                     #self.metadata['DimensionOrder'] = 'XY'
                     if self.fp._subifdslevel < 0:

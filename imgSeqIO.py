@@ -18,7 +18,7 @@ class ImgSeqReader(generalIO.GeneralReader):
         RGB images are not accepted.
         """
         if isinstance(fns, six.string_types) and os.path.isdir(fns):
-            fns = [os.path.join(fns, fn) for fn in os.listdir(fns)]
+            fns = [os.path.join(fns, fn) for fn in os.listdir(fns) if not fn.startswith('.')]
         elif type(fns) not in [list, set, tuple]:
             raise ValueError('fns must be a directry, or list, set or tuple of filenames')
 
