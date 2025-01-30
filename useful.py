@@ -38,6 +38,13 @@ try:
     import Priithon_bin.seb as S
 except:
     S = None
+
+try:
+    from imgio import Reader, Writer
+    import imgio
+except ImportError:
+    pass
+    
 from .usefulGeo import *
 
 #  >>> dir(A)
@@ -3328,7 +3335,7 @@ def loadTxt(fname, ndim=3, dtype=None, delimiter=None, skipNlines=0,
             import bz2
             fh = bz2.BZ2File(fname)
         else:
-            fh = file(fname)
+            fh = open(fname) #file(fname)
     elif hasattr(fname, 'readline'):
         fh = fname
     else:

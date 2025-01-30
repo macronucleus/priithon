@@ -304,13 +304,17 @@ def plotFigure(which_one = None):
     """if which_one = None       : start a new plot window
        if which_one is 'integer' : select that figure as active
     """
-    from . import plt
     try:
-        return plt.figure(which_one)
-        #if which_one is None:
-        #    plothold(on=0)
-    except wx.PyDeadObjectError: 
-        print("** figure '%s' invalid - made new one **"%which_one)
+        import wxmplot.interactive as wi
+        return wi.get_plot_window()
+    except ImportError:
+        from . import plt
+        try:
+            return plt.figure(which_one)
+            #if which_one is None:
+            #    plothold(on=0)
+        except wx.PyDeadObjectError: 
+            print("** figure '%s' invalid - made new one **"%which_one)
 
 def plotFigureGetNo(createNewIfNeeded=False):
     """
@@ -342,13 +346,15 @@ def plotClear(figureNo=None):
     # see interface: if not _active.hold in ['on','yes']:
     fig = _getFig(figureNo)
 
-    fig.line_list.data = [] # clear it out
-    fig.image_list.data = [] # clear it out
-    try:
-        del fig._sebCurrentColorIndex # reset colors 
-    except AttributeError:
-        pass
-    fig.update()
+    if hasattr(fig, 'client'):
+        fig.line_list.data = [] # clear it out
+        fig.image_list.data = [] # clear it out
+        try:
+            del fig._sebCurrentColorIndex # reset colors 
+        except AttributeError:
+            pass
+        fig.update()
+    
     
 def plotClose(which_one = None):
     """

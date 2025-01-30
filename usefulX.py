@@ -1912,7 +1912,7 @@ def vSaveRGBviewport(v_id, fn, clip=True, flipY=True):
     from . import useful as U
     a = v_id.readGLviewport(clip=clip, flipY=flipY, copy=True)
 
-    U.saveImg(a, fn)
+    U.saveImg(a, fn, rescaleTo8bit=False)
 
 def vCopyToClipboard(v_id=-1, clip=True):
     """
