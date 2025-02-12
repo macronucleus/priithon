@@ -93,6 +93,8 @@ class GLViewerCommon(wxgl.GLCanvas):
         #wx.EVT_MENU(self, Menu_ZoomOut, self.OnZoomOut)
         #wx.EVT_MENU(self, Menu_ZoomIn, self.OnZoomIn)
 
+        
+        dontneed="""
         self.Bind(wx.EVT_MENU, self.On51, id=1051) # left key
         self.Bind(wx.EVT_MENU, self.On52, id=1052) # right key
         self.Bind(wx.EVT_MENU, self.On53, id=1053) # up key
@@ -100,7 +102,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         #wx.EVT_MENU(self, 1051, self.On51)  # left key
         #wx.EVT_MENU(self, 1052, self.On52)  # right key
         #wx.EVT_MENU(self, 1053, self.On53)  # up key
-        #wx.EVT_MENU(self, 1054, self.On54)  # down key
+        #wx.EVT_MENU(self, 1054, self.On54)  # down key"""
         
 
         #wx.EVT_MENU(self, Menu_grid, self.setPixelGrid)  # for wxAcceleratorTable
@@ -126,10 +128,12 @@ class GLViewerCommon(wxgl.GLCanvas):
             #(wx.ACCEL_NORMAL, wx.WXK_NEXT, Menu_ZoomOut),  
             #(wx.ACCEL_NORMAL, wx.WXK_PRIOR,Menu_ZoomIn),   
 
-            (wx.ACCEL_CTRL, wx.WXK_LEFT, 1051),
-            (wx.ACCEL_CTRL, wx.WXK_RIGHT,1052),
-            (wx.ACCEL_CTRL, wx.WXK_UP,   1053),
-            (wx.ACCEL_CTRL, wx.WXK_DOWN, 1054),
+           # (wx.ACCEL_CTRL, wx.WXK_LEFT, 1051),
+           # (wx.ACCEL_CTRL, wx.WXK_RIGHT,1052),
+           # (wx.ACCEL_CTRL, wx.WXK_UP,   1053),
+           # (wx.ACCEL_CTRL, wx.WXK_DOWN, 1054),
+
+           # (wx.ACCEL_CTRL, wx.MOD_CMD | 'c', 1051),
 
 
             (wx.ACCEL_ALT, ord('0'), Menu_ZoomReset),
@@ -505,7 +509,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         fac = 1.189207115002721
         self.zoom(fac, absolute=False)
 
-
+    dontneed="""
     def On51(self, event):
         n= self.pic_nx / 4
         if self.originLeftBottom == 8:
@@ -530,7 +534,7 @@ class GLViewerCommon(wxgl.GLCanvas):
         self.y0 += dy
         
         self.zoomChanged = True
-        self.Refresh(0)
+        self.Refresh(0)"""
 
 
 
@@ -575,10 +579,10 @@ class GLViewerCommon(wxgl.GLCanvas):
 
 
     ## don't need
-#     def OnSaveClipboard(self, event=None):
-#         import usefulX2 as Y
-#         Y.vCopyToClipboard(self, clip=1)
-#         Y.shellMessage("### screenshot saved to clipboard'\n")
+    def OnSaveClipboard(self, event=None):
+         import usefulX2 as Y
+         Y.vCopyToClipboard(self, clip=1)
+         Y.shellMessage("### screenshot saved to clipboard'\n")
 
     ## don't need
     def OnSaveScreenShort(self, event=None):

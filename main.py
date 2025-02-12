@@ -330,6 +330,12 @@ class ImagePanel(wx.Panel):
             box = G.newSpaceV(sizer)
             self.loadImgButton = G.makeButton(self.sliderPanel, box, self.loadImage2Memory, title='Load whole data into memory', tip='If the Z/T slider or changing scaling is too slow, try this funtion.')
 
+        if self.doc.nw == 1:
+            box = G.newSpaceV(sizer)
+            atrdic = viewer2.GLViewer.__dict__
+            self.choice_colmaps = [key for key in atrdic if type(atrdic[key]) == list and not key.startswith('_')] + ['log', 'min_max']
+            label, self.colmapch = G.makeListChoice(self.sliderPanel, box, 'colormap ', self.choice_colmaps, defValue=[self.choice_colmaps[0]], targetFunc=self.oncolmap)
+
 
     def OnAutoFocus(self, evt=None):
         """
@@ -546,6 +552,15 @@ class ImagePanel(wx.Panel):
         # save
         Y.vSaveRGBviewport(v, fn, flipY=False)
 
+    def onCopyRegion(self, evt=None):
+        roi = self.getROI()
+        ws = [w for w, hist in enumerate(self.hist_toggleButton) if hist.GetValue()]
+        out = imgio.copyRegion(self.doc.fn, twzyx0=(0,0,roi[0][0],roi[0][1],roi[0][2]),twzyx1=(None,None,roi[1][0],roi[1][1],roi[1][2]),channel_ids=ws)
+
+        if evt:
+            frame = self.parent
+            main(out, useCropbox=True)
+
         
     def initHists(self):
         ''' Initialize the histogram/aligner panel, and a bunch of empty lists;
@@ -575,7 +590,8 @@ class ImagePanel(wx.Panel):
         
         self.hist_singleChannelMode = None
         self.hist_toggleID2col    = {}
-
+        self.gamma_cmbs = []
+        
         for i in range(self.doc.nw):
             wave = self.doc.wave[i]#mrcIO.getWaveFromHdr(self.doc.hdr, i)
             self.hist_show[i] = True
@@ -586,6 +602,9 @@ class ImagePanel(wx.Panel):
             self.hist_toggleButton[i].Bind(wx.EVT_RIGHT_DOWN, 
                                            lambda ev: self.OnHistToggleButton(ev, i=i, mode="r"))
             self.hist_toggleButton[i].SetValue( self.hist_show[i] )
+
+            choice = ['%.1f' % v for v in N.arange(0.4, 1.6, 0.2)]
+            self.gamma_cmbs.append(G.makeCombo(self.histsPanel, box, '', choices=choice, defVal='1.0', targetFunc=self.onGamma)[1])
 
             self.intensity_label[i] = G.makeTxt(self.histsPanel, box, ' '*32)
 
@@ -642,6 +661,9 @@ class ImagePanel(wx.Panel):
         self.roi_label0 = G.makeTxt(self.histsPanel, box, ' '*64)
         box = G.newSpaceV(sizer)
         self.roi_label1 = G.makeTxt(self.histsPanel, box, ' '*64)
+        if self.useCropbox:
+            box = G.newSpaceV(sizer)
+            copyRegionButton = G.makeButton(self.histsPanel, box, self.onCopyRegion, title='Copy Region', tip='')
 
         self.histsPanel.SetAutoLayout(1)
         self.histsPanel.SetupScrolling()
@@ -1049,6 +1071,59 @@ class ImagePanel(wx.Panel):
         return tuple(start), tuple(stop)
         #return [slice(*ss) for ss in zip(start, stop)]
 
+    def oncolmap(self, evt=None):
+        choice = self.colmapch.GetStringSelection()
+
+        for i, viewer in enumerate(self.viewers):
+            if choice == 'Grey':
+                viewer.cmone()
+                #colMap = N.empty(shape = (3,n), dtype = N.float32)
+                #colMap[:] = N.linspace(0,1,num=n,endpoint=True)
+            elif choice == 'log':
+                viewer.cmlog()
+            elif choice == 'spectrum3':
+                viewer.cmcol()
+            elif choice == 'blackbody':
+                viewer.cmblackbody()
+            elif choice == 'magma':
+                viewer.cmmagma()
+            elif choice == 'viridis':
+                viewer.cmviridis()
+           # elif choice == 'spectrum3':
+           #     viewer.cmwheel()
+            elif choice == 'min_max':
+                viewer.cmGrayMinMax()
+
+            self.updateHistColMap(i)
+
+    def updateHistColMap(self, i):
+        viewer = self.viewers[i]
+        hist = self.hist[i]
+        colMap = viewer.colMap
+        hist.colMap = colMap
+        hist.m_histScaleChanged = 1
+        hist.m_imgChanged = True
+        hist.Refresh(0)
+
+    def onGamma(self, evt):
+        ## need to obtain value from evt
+        for i, cmb in enumerate(self.gamma_cmbs):
+            choice = cmb.GetValue()
+            try:
+                val = float(choice)
+            except TypeError:
+                return
+
+            v = self.viewers[i]
+            hist = self.hist[i]
+            if val != v.gamma:
+                v.gamma = val
+                v.setGamma()
+                v.changeHistogramScaling()
+                self.updateHistColMap(i)
+        
+
+    
 class MyFrame(wx.Frame):
 
     def __init__(self, title='ND viewer', parent=None, id=wx.ID_ANY, size=FRAMESIZE):
