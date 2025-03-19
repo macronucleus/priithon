@@ -220,19 +220,24 @@ class GLViewer(GLViewerCommon):
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
 
-        if img.dtype.type in (N.uint8, N.bool_):
+        if self.dtype:
+            dtype = self.dtype
+            img = img.astype(dtype)
+        else:
+            dtype = img.dtype.type
+        if dtype in (N.uint8, N.bool_):
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, tex_nx,tex_ny, 0, 
                          GL_LUMINANCE,GL_UNSIGNED_BYTE, None)
-        elif img.dtype.type == N.int16:
+        elif dtype == N.int16:
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, tex_nx,tex_ny, 0, 
                          GL_LUMINANCE,GL_SHORT, None)
-        elif img.dtype.type == N.float32:
+        elif dtype == N.float32:
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, tex_nx,tex_ny, 0, 
                          GL_LUMINANCE,GL_FLOAT, None)
-        elif img.dtype.type == N.uint16:
+        elif dtype == N.uint16:
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, tex_nx,tex_ny, 0, 
                          GL_LUMINANCE,GL_UNSIGNED_SHORT, None)
-        elif img.dtype.type in (N.float64,
+        elif dtype in (N.float64,
                                 N.int32, N.uint32, N.int64, N.uint64,):
                                 #N.complex64, N.complex128):
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, tex_nx,tex_ny, 0, 
@@ -743,6 +748,8 @@ class GLViewer(GLViewerCommon):
             self.Refresh(0)
         
     def setImage(self, i, imgArr, refreshNow=1):
+        if self.dtype:
+            imgArr = imgArr.astype(self.dtype)
         if self.imgList[i][2].shape != imgArr.shape:
             # in this case we 
             #  1. do "parts of" delImage

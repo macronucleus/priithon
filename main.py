@@ -64,7 +64,7 @@ def initglut():
 
 class ImagePanel(wx.Panel):
     viewCut   = False
-    def __init__(self, parent, imFile=None, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize, useCropbox=viewer2.CROPBOX):
+    def __init__(self, parent, imFile=None, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize, useCropbox=viewer2.CROPBOX, dtype=None):
         wx.Panel.__init__(self, parent, id, pos, size, name='')
 
         # to make consistent with the older viewers
@@ -82,6 +82,10 @@ class ImagePanel(wx.Panel):
             self.doc = imgio.Reader(imFile)
         else:
             self.doc = imFile
+
+        self.dtype = dtype
+        if dtype:
+            self.doc.dtype=dtype
 
         #self.zsec  = [self.doc.nz//2]
         #self.zlast = [0]
@@ -112,6 +116,7 @@ class ImagePanel(wx.Panel):
                                              size=wx.Size(self.doc.nx, self.doc.ny),
                                              useCropbox=self.useCropbox
                                              ))
+        self.viewers[-1].dtype = self.dtype
 
         self._mgr.AddPane(self.viewers[0], aui.AuiPaneInfo().Floatable(False).Name('XY').Caption("XY").BestSize((self.doc.nx, self.doc.ny)).CenterPane().Position(0))
 
@@ -460,6 +465,7 @@ class ImagePanel(wx.Panel):
                                                  size=wx.Size(self.doc.nz, self.doc.ny),
                                                  useCropbox=self.useCropbox
                                                  ))
+            self.viewers[-1].dtype = self.dtype
             self._mgr.AddPane(self.viewers[-1], aui.AuiPaneInfo().Floatable(False).Name('ZY').Caption("ZY").Left().Position(0).BestSize((self.doc.nz, self.doc.ny)))#.Dockable(False).Top())
             self.viewers[-1].setMyDoc(self.doc, self)
             self.viewers[-1].scale *= self.doc.pxlsiz[-3]/self.doc.pxlsiz[-2] # mag compensate
@@ -478,6 +484,7 @@ class ImagePanel(wx.Panel):
                                                  size=wx.Size(self.doc.nx, self.doc.nz),
                                                  useCropbox=self.useCropbox
                                                  ))
+            self.viewers[-1].dtype = self.dtype
             self._mgr.AddPane(self.viewers[-1], aui.AuiPaneInfo().Floatable(False).Name('XZ').Caption("XZ").BestSize((self.doc.nz, self.doc.ny)).CenterPane().Position(1))
             self.viewers[-1].setMyDoc(self.doc, self)
             self.viewers[-1].setAspectRatio(self.doc.pxlsiz[-3]/self.doc.pxlsiz[-1])
