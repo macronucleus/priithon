@@ -111,7 +111,6 @@ class MultiTiffReader(generalIO.GeneralReader):
                 waxis = axes.index('W')
                 nw = shape[waxis]
         waves = generalIO.makeWaves(nw)
-            
 
         
         p = self.fp.pages[0]
@@ -278,7 +277,7 @@ class MultiTiffReader(generalIO.GeneralReader):
                     waves[w] = generalIO.WAVE_START - 50
         
         elif 'waves' in self.metadata:
-            if isinstance(type(self.metadata['waves']), six.string_types):#type(self.metadata['waves']) in (int, float):
+            if isinstance(self.metadata['waves'], six.string_types):#type(self.metadata['waves']) in (int, float):
                 waves = [eval(w) for w in self.metadata['waves'].split(',')]
             else:
                 waves = [self.metadata['waves']]

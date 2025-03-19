@@ -70,10 +70,19 @@ class ND2Reader(generalIO.GeneralReader):
         # excitation wavelength
         self.exc = [cc.channel.excitationLambdaNm for cc in self.fp.metadata.channels]
 
+        # objective lens
         try:
             self.optics_data['na'] = [cc.microscope.objectiveNumericalAperture for cc in self.fp.metadata.channels]
             self.optics_data['n1'] = [cc.microscope.immersionRefractiveIndex for cc in self.fp.metadata.channels]
+            self.optics_data['mag'] = [cc.microscope.objectiveMagnification for cc in self.fp.metadata.channels]
         except KeyError:
+            pass
+
+        try:
+            self.na = self.optics_data['na'][0]
+            self.n1 = self.optics_data['n1'][0]
+            self.mag = self.optics_data['mag'][0]
+        except IndexError:
             pass
 
 

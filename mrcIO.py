@@ -12,6 +12,20 @@ except ImportError:
 READABLE_FORMATS = WRITABLE_FORMATS = ('mrc', 'dv')
 # 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT (idx = [2,1,0])
 
+LENS_ID={
+    # Olympus
+    10205: (20, 0.75, 1),
+    10404: (40, 0.85, 1),
+    10410: (40, 1.15, 1.333),
+    10403: (40, 1.35, 1.518),
+    10603: (60, 1.20, 1.333),
+    10602: (60, 1.40, 1.518),
+    10612: (60, 1.42, 1.518),
+    10003: (100, 1.35, 1.40),
+    10002: (100, 1.40, 1.518),
+    10007: (100, 1.40, 1.518)
+             }
+
 class MrcReader(generalIO.GeneralReader):
     def __init__(self, fn, mode='r'):
         generalIO.GeneralReader.__init__(self, fn, mode)
@@ -78,6 +92,9 @@ class MrcReader(generalIO.GeneralReader):
                 i = self.findFileIdx(w=w)
                 if i < self.fp.extFloats.shape[0]:
                     self.exc[w] = self.fp.extFloats[i,10]
+
+        # objective
+        self.mag, self.na, self.n1 = LENS_ID.get(int(self.fp.hdr.LensNum), (generalIO.MAG, generalIO.NA, generalIO.N1))
             
             #self.exc = self.fp.extFloats[:nw,10]
 

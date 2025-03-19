@@ -77,8 +77,9 @@ class CZIReader(generalIO.GeneralReader):
         self.setPixelSize(**pdic)
 
         try:
-            self.optics_data['na'] = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']['LensNA']
-            self.optics_data['n1'] = img['ObjectiveSettings']['RefractiveIndex']
+            self.optics_data['na'] = self.na = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']['LensNA']
+            self.optics_data['n1'] = self.n1 = img['ObjectiveSettings']['RefractiveIndex']
+            
         except KeyError:
             pass
             

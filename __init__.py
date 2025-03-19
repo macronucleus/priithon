@@ -74,8 +74,10 @@ def _switch(fn, read=True, *args, **kwds):
 
     if isinstance(fn, six.string_types):
         ext = os.path.splitext(fn)[1].replace(os.path.extsep, '')
-    elif hasattr(fn, 'shape'): # array
+    elif 'ndarray' == type(fn).__name__:#hasattr(fn, 'shape'): # array
         return klasses['arr'](fn, *args, **kwds)
+    elif 'Reader' in type(fn).__name__:
+        return fn
     else:
         raise ValueError('The input type %s is not understood' % type(fn))
         

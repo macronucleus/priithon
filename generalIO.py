@@ -8,6 +8,10 @@ WAVE_STEP  =  1
 
 READABLE_FORMATS = WRITABLE_FORMATS = ['npy']
 
+NA=None#1.4
+N1=None#1.515
+MAG=None
+
 class ImageIOError(Exception):
     """
     general image file IO error
@@ -34,6 +38,11 @@ class GeneralReader(object):
         self.mode = mode
         self.axes = 'YX' # axes of one section
         self.axes_w = 0
+
+        self.mag= MAG
+        self.na = NA
+        self.n1 = N1
+
 
         # current positions
        # self.t = self.w = self.z = self.y = self.x = 0
