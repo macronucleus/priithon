@@ -639,6 +639,9 @@ class spv(spvCommon):
         for i in range( self.nColors ):        
             #CHECK mi,ma = U.mm( self.img[0] )
             self.hist[i].autoFit(amin=self.mmms[i][0], amax=self.mmms[i][1])
+
+    OnAutoHistScaleAll = OnAutoHistScale
+            
     def OnViewFFT(self, event=77777):
         from . import fftfuncs as F
         if self.data.dtype.type in (N.complex64, N.complex128):

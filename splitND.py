@@ -721,6 +721,12 @@ class spv(spvCommon):
         from . import useful as U
         mi,ma,me,ss = U.mmms( self.img )
         self.hist.autoFit(amin=mi, amax=ma)
+
+    def OnAutoHistScaleAll(self, event=77777):
+        from . import useful as U
+        mi,ma,me,ss = U.mmms( self.data )
+        self.hist.autoFit(amin=mi, amax=ma)
+        
     def OnViewFFT(self, event=77777):
         from . import fftfuncs as F
         if self.data.dtype.type in (N.complex64, N.complex128):
