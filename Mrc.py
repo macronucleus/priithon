@@ -158,7 +158,8 @@ class Mrc:
         #self.extHdrArray.dtype = type_descr
         self.extHdrArray = N.recarray(shape=nz, dtype=type_descr, buf=self.e)
         if self.isByteSwapped:
-            self.extHdrArray = self.extHdrArray.newbyteorder()
+            #self.extHdrArray = self.extHdrArray.newbyteorder()
+            self.extHdrArray = self.extHdrArray.view(self.extHdrArray.dtype.newbyteorder())
         
         self.extInts   = self.extHdrArray.field('int')
         self.extFloats = self.extHdrArray.field('float')
@@ -186,7 +187,8 @@ class Mrc:
         self.data.shape = shape
             
         if self.isByteSwapped:
-            self.data = self.data.newbyteorder()
+            #self.data = self.data.newbyteorder()
+            self.data = self.data.view(self.data.dtype.newbyteorder())
 
     def setTitle(self, s, i=-1):
         """set title i (i==-1 means "append") to s"""
@@ -565,7 +567,7 @@ class Mrc2:
                                              shape=nSecs  )
 
             if self._fileIsByteSwapped:
-                self._extHdrArray = self._extHdrArray.newbyteorder()
+                self._extHdrArray = self._extHdrArray.view(self._extHdrArray.dtype.newbyteorder())
 
             self.extInts   = self._extHdrArray.field('int')
             self.extFloats = self._extHdrArray.field('float')
