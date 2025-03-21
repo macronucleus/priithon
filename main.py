@@ -1103,9 +1103,9 @@ class ImagePanel(wx.Panel):
 
             self.updateHistColMap(i)
 
-    def updateHistColMap(self, i):
+    def updateHistColMap(self, i, w=0):
         viewer = self.viewers[i]
-        hist = self.hist[i]
+        hist = self.hist[w]#i]
         colMap = viewer.colMap
         hist.colMap = colMap
         hist.m_histScaleChanged = 1
@@ -1114,20 +1114,21 @@ class ImagePanel(wx.Panel):
 
     def onGamma(self, evt):
         ## need to obtain value from evt
-        for i, cmb in enumerate(self.gamma_cmbs):
+        for w, cmb in enumerate(self.gamma_cmbs):
             choice = cmb.GetValue()
             try:
                 val = float(choice)
             except TypeError:
                 return
 
-            v = self.viewers[i]
-            hist = self.hist[i]
-            if val != v.gamma:
-                v.gamma = val
-                v.setGamma()
-                v.changeHistogramScaling()
-                self.updateHistColMap(i)
+          #  hist = self.hist[w]
+            for i, v in enumerate(self.viewers):
+            #v = self.viewers[i]
+                if val != v.gamma[w]:
+                    v.gamma[w] = val
+                    v.setGamma(w)
+                    v.changeHistogramScaling()
+                    self.updateHistColMap(i, w=w)
         
 
     

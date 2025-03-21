@@ -32,7 +32,7 @@ class GLViewer(GLViewerCommon):
         self.hclose = False
         self.myViewManager = weakref.proxy(parent.parent)
 
-        self.gamma = 1
+        self.gamma = [1]
         self._lastGamma_set = None
         self.colMap = None
         self.colMap_menuIdx = 0
@@ -86,6 +86,7 @@ class GLViewer(GLViewerCommon):
 
     def setMyDoc(self, doc, parent):
         self.mydoc = weakref.proxy(doc)
+        self.gamma = [1 for w in range(self.mydoc.nw)]
         #self.myViewManager = weakref.proxy(parent)
         #self.setLeftDown()
 
@@ -1250,17 +1251,17 @@ class GLViewer(GLViewerCommon):
         self.original_colMap = self.colMap.copy()
         self.setGamma()
 
-    def setGamma(self):
+    def setGamma(self, w=0):
         if not hasattr(self, 'original_colMap') or self.colMap is None:
-            self.cmgray(self.gamma)
+            self.cmgray(self.gamma[w])
             return
         #else:
         #    self.original_colMap = self.colMap.copy()
-        if self.gamma != 1:
+        if self.gamma[w] != 1:
             if self.original_colMap.min() > 0:
-                self.colMap[:] = self.original_colMap ** self.gamma
+                self.colMap[:] = self.original_colMap ** self.gamma[w]
             else:
-                self.colMap[:] = N.clip(self.original_colMap, 0, None) ** self.gamma
+                self.colMap[:] = N.clip(self.original_colMap, 0, None) ** self.gamma[w]
 
     def cmgray(self, gamma=1):
         """set col map to gray"""
