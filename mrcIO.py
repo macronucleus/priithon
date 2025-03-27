@@ -267,6 +267,9 @@ class MrcWriter(generalIO.GeneralWriter):
             else:
                 msg = key
 
+            # escape from unicode characters
+            msg = msg.encode('ascii', errors='ignore').decode()
+
             if N.bytes_(msg) in self.hdr.title:
                 continue
 
