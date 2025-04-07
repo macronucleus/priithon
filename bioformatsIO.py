@@ -591,7 +591,7 @@ class AbstractReader(object):
 #### ============== Reader =========================
 
         
-class BioformatsReader(AbstractReader, generalIO.GeneralReader):
+class Reader(AbstractReader, generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
@@ -601,7 +601,7 @@ class BioformatsReader(AbstractReader, generalIO.GeneralReader):
 
         AbstractReader.__init__(self)
         
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
         # -> openFile() -> readHeader() -> organize() -> setSecSize() -> doOnSetDim()
         
     def close(self):
@@ -795,13 +795,13 @@ class BioformatsReader(AbstractReader, generalIO.GeneralReader):
             t = ii - ((w+1) * self.nt)
         return t, z, w
 
-class BioformatsWriter(AbstractReader, generalIO.GeneralWriter):
+class Writer(AbstractReader, generalIO.Writer):
     def __init__(self, fn):
         """
         fn: file name (must be 'ome.tiff' for OME-TIFF)
         """
         AbstractReader.__init__(self)
-        generalIO.GeneralWriter.__init__(self, fn)
+        generalIO.Writer.__init__(self, fn)
         # -> openFile()
 
     def openFile(self):

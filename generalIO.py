@@ -18,7 +18,7 @@ class ImageIOError(Exception):
     """
     pass
 
-class GeneralReader(object):
+class Reader(object):
     def __init__(self, fn, mode='r'):
         """
         fn: file name
@@ -600,7 +600,7 @@ class GeneralReader(object):
 
         return data
 
-class GeneralWriter(GeneralReader):
+class Writer(Reader):
     def __init__(self, fn, mode='wb'):
         """
         fn: file name
@@ -610,7 +610,7 @@ class GeneralWriter(GeneralReader):
         self._secExtraByteSize = 0
         
         # call self.openFile()
-        GeneralReader.__init__(self, fn, mode)
+        Reader.__init__(self, fn, mode)
 
     def setFromReader(self, rdr):
         """

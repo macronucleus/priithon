@@ -11,7 +11,7 @@ WRITABLE_FORMATS = imgIO.WRITABLE_FORMATS
 READABLE_FORMATS = imgIO.READABLE_FORMATS
 
 
-class ImgSeqReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fns, mode='r'):
         """
         The fns must be a sequence of simgle image files.
@@ -23,7 +23,7 @@ class ImgSeqReader(generalIO.GeneralReader):
             raise ValueError('fns must be a directry, or list, set or tuple of filenames')
 
         self.fns = fns
-        generalIO.GeneralReader.__init__(self, fns[0])
+        generalIO.Reader.__init__(self, fns[0])
 
     def closed(self):
         return hasattr(self, 'fp')
@@ -164,13 +164,13 @@ class ImgSeqReader(generalIO.GeneralReader):
 
 #------ Below, not yet done -----#
 
-class ImgSeqWriter(generalIO.GeneralWriter):
+class Writer(generalIO.Writer):
     def __init__(self, basefn, mode='w'):
         """
         multipage: need to use setHdr() or setDim()
         rgbOrder: rgb, rgba etc... 
         """
-        generalIO.GeneralWriter.__init__(self, basefn, mode)
+        generalIO.Writer.__init__(self, basefn, mode)
         
         base, self.format = os.path.splitext(basefn)
 

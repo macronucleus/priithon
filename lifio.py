@@ -16,12 +16,12 @@ try:
 except ImportError:
     READABLE_FORMATS = ()
 
-class LifReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
         """
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
 
     def openFile(self, series=0):
         """

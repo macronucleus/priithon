@@ -36,12 +36,12 @@ def _convertUnit(val, fromwhat='mm', towhat=u'\xb5'+'m'):
     factor = factors[fromwhat] - factors[towhat] or 0
     return float(val) * 10 ** factor
 
-class MultiTiffReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
         """
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
 
     def openFile(self):
         """
@@ -330,7 +330,7 @@ class MultiTiffReader(generalIO.GeneralReader):
         return arr
 
 
-class MultiTiffWriter(generalIO.GeneralWriter):
+class Writer(generalIO.Writer):
     def __init__(self, fn, mode=None, style='imagej', software='multitifIO.py', metadata={}):
         """
         mode is 'wb' whatever the value is...
@@ -342,7 +342,7 @@ class MultiTiffWriter(generalIO.GeneralWriter):
         #self.extratags = ()
         self.init = False
 
-        generalIO.GeneralWriter.__init__(self, fn, mode)
+        generalIO.Writer.__init__(self, fn, mode)
         self.metadata.update(metadata) #{}
 
         if self.style == 'RGB':
@@ -392,15 +392,33 @@ class MultiTiffWriter(generalIO.GeneralWriter):
                        # axes = self.metadata['axes']
                        # print(self.metadata, datashape, axes)
 
-                        self.fp._ome.addimage(
-                            self.dtype,
-                            datashape,
-                            storedshape,
-                          #  axes=axes,
-                            **self.metadata
-                            )
-                    des = self.fp._ome.tostring(declaration=True).encode()
+                        if hasattr(self.fp._ome, 'addimage'): # older versions
+                            self.fp._ome.addimage(
+                                self.dtype,
+                                datashape,
+                                storedshape,
+                              #  axes=axes,
+                                **self.metadata
+                                )
+                        else:
+                            self.fp._omexml.addimage(
+                                self.dtype,
+                                datashape,
+                                storedshape,
+                              #  axes=axes,
+                                **self.metadata
+                                )
 
+                        # when this error is raised:
+                        # OmeXmlError('metadata DimensionOrder does not match {axes!r}')
+                        # then edit tifffile.py
+                        # ax for ax in omedimorder if dimsizes[dimorder.index(ax)] >= 1
+                        # change '>' to '>='
+                        
+                    if hasattr(self.fp._ome, 'addimage'): # older versions
+                        des = self.fp._ome.tostring(declaration=True).encode()
+                    else:
+                        des = self.fp._omexml.tostring(declaration=True).encode()
 
                 self.fp.overwrite_description(des)
         
@@ -748,9 +766,9 @@ def astype(value):
             return value
 
 def testit(fn, outfn='testImageJ.tif'):
-    r = MultiTiffReader(fn)
+    r = Reader(fn)
                 
-    ww = MultiTiffWriter(outfn, imagej=True)
+    ww = Writer(outfn, imagej=True)
     ww.setFromReader(r)
     for t in range(r.nt):
         for w in range(r.nw):
@@ -758,7 +776,7 @@ def testit(fn, outfn='testImageJ.tif'):
                 arr = r.getArr(t=t, w=w, z=z)
                 ww.writeArr(arr, t=t, w=w, z=z)
     ww.close()
-    rr = MultiTiffReader(outfn)
+    rr = Reader(outfn)
     return rr.asarray()
 
 
@@ -826,11 +844,10 @@ def walk(node, func):
         for key, item in node.items():
             if isinstance(item, (list, dict)):
                 item = walk(item, func)
-            elif isinstance(key, six.string_types):# and u'\xb5' in key:
+            if isinstance(key, six.string_types):# and u'\xb5' in key:
                 key = func(key)
-            elif isinstance(item, six.string_types):# and u'\xb5' in item:
+            if isinstance(item, six.string_types):# and u'\xb5' in item:
                 item = func(item)
-                #print(key, item)
             node2[key] = item
     elif isinstance(node, list):
         node2 = []

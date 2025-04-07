@@ -1,24 +1,36 @@
 from __future__ import print_function
-import os, glob, sys
+import os, glob, sys, warnings
 if sys.version_info.major == 3:
     from importlib import reload
 import six
 import numpy as N
 
 if sys.version_info.major == 2:
-    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
+    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
 elif sys.version_info.major >= 3:
     try:
-        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
+        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
     except ImportError:
-        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio
+        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
 
 uninit_javabridge = bioformatsIO.uninit_javabridge
 
 READABLE_FORMATS = []
 WRITABLE_FORMATS = []
-_names = ['seq', 'tif', 'mrc', 'bio']
-for module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO, nd2io, cziio]:
+#_names = ['seq', 'tif', 'mrc', 'bio', 'nd2', 'czi', 'oib', 'lif']
+_modules = {'npy': generalIO,
+                'arr': arrayIO,
+                'img': imgIO,
+                'seq': imgSeqIO,
+                'tif': multitifIO,
+                'mrc': mrcIO,
+                'bio': bioformatsIO,
+                'nd2': nd2io,
+                'czi': cziio,
+                'oib': oibio,
+                'lif': lifio}
+for name, module in _modules.items():
+    #or module in [generalIO, imgIO, imgSeqIO, multitifIO, mrcIO, bioformatsIO, arrayIO, nd2io, cziio, oibio]:
     reload(module)
     READABLE_FORMATS += module.READABLE_FORMATS
     WRITABLE_FORMATS += module.WRITABLE_FORMATS
@@ -46,22 +58,117 @@ def Writer(fn, rdr=None, *args, **kwds):
         wtr.setFromReader(rdr)
     return wtr
 
+def _formats(read=True, name=None):
+    if read:
+        fmt = 'READABLE_FORMATS'
+        allfmt = READABLE_FORMATS
+    else:
+        fmt = 'WRITABLE_FORMATS'
+        allfmt = WRITABLE_FORMATS
+    if name:
+        module = _modules[name]
+        return module.__getattribute__(fmt)
+    else:
+        return allfmt
+
+def _klass(read, name, fn, *args, **kwds):
+    if read:
+        klassname = 'Reader'
+    else:
+        klassname = 'Writer'
+
+    try:
+        return _modules[name].__getattribute__(klassname)(fn, *args, **kwds)
+    except Exception:
+        if name != 'bio' and os.path.splitext(fn)[1] in _formats(read, 'bio'):
+            warnings.warn('Reading %s failed, use bioformats instead, error message was %s' % (name, Exception), UserWarning)
+            return _modules['bio'].__getattribute__(klassname)(fn, *args, **kwds)
+        else:
+            raise Exception
 
 def _switch(fn, read=True, *args, **kwds):
+
+    #--- interplete ---
+    # filename or fileseries
+    if isinstance(fn, six.string_types):
+        if os.path.isfile(fn):
+            ext = os.path.splitext(fn)[1].replace(os.path.extsep, '')
+        elif os.path.isdir(fn):
+            fn = [os.path.join(fn, f) for f in os.listdir(fn)]
+        elif '?' in fn or '*' in fn:
+            fn = glob.glob(fn + '*')
+            if not fn:
+                raise ValueError('The input file name %s was not understood' % fn)
+    # arrayIO
+    elif 'ndarray' == type(fn).__name__:
+        return _modules['arr'].__getattribute__('Reader')(fn, *args, **kwds)
+    # Reader or Writer 
+    elif 'Reader' in type(fn).__name__ or 'Writer' in type(fn).__name__:
+        return fn
+    # Error
+    else:
+        raise ValueError('The input type %s is not understood' % type(fn))
+        
+    if read and ext not in _formats(read) and ext in _formats(read, 'bio'):
+        raise ValueError(JDK_MSG % ext)
+
+    # seq
+    if (not isinstance(fn, six.string_types) and hasattr(fn, '__iter__')) or (read and not os.path.isfile(fn)):
+
+        fns = [ff for ff in fn if os.path.splitext(ff)[1].replace(os.path.extsep, '') in formats['seq']]
+        if os.path.commonprefix(fns):
+            return _klass(read, 'seq', fns, *args, **kwds)
+        else:
+            raise ValueError('The directory or file names does not seem to contain image series')
+
+    # ome.tif is written by BioformatsWriter
+    elif fn.endswith('ome.tif') and not read:
+        import tifffile
+        tifversion = tifffile.__version__.split('.')
+        if (int(tifversion[0]) == 2020 and int(tifversion[1]) >= 11) or int(tifversion[0]) > 2020:
+            kwds2 = kwds.copy()
+            kwds2['style'] = 'ome'
+            return _klass(read, 'tif', fn, *args, **kwds2)
+        else:
+            return _klass(read, 'bio', fn, *args, **kwds)
+
+    # tif and others
+    else:
+       # print(_modules.keys())
+        modules = dict([(name, module) for name, module in _modules.items() if name not in ('bio', 'seq', 'img', 'arr')])
+        for name, module in modules.items():
+            #print(ext, _formats(read, name))
+            if ext in _formats(read, name):
+                return _klass(read, name, fn, *args, **kwds)
+
+        if ext in _formats(read, 'bio'):
+            return _klass(read, 'bio', fn, *args, **kwds)
+        
+        try:
+            return _klass(read, 'mrc', fn, *args, **kwds)
+        except:
+            raise ValueError('The input file name %s was not understood' % fn)
+
+    
+        
+
+def _switch_0ld(fn, read=True, *args, **kwds):
     if read:
         formats = {'seq': imgSeqIO.READABLE_FORMATS,
                    'tif': multitifIO.READABLE_FORMATS,
                    'mrc': mrcIO.READABLE_FORMATS,
                    'bio': bioformatsIO.READABLE_FORMATS,
                     'nd2': nd2io.READABLE_FORMATS,
-                    'czi': cziio.READABLE_FORMATS}
+                    'czi': cziio.READABLE_FORMATS,
+                       'oib': oibio.READABLE_FORMATS}
         klasses = {'seq': imgSeqIO.ImgSeqReader,
                    'tif': multitifIO.MultiTiffReader,
                    'mrc': mrcIO.MrcReader,
                    'bio': bioformatsIO.BioformatsReader,
                    'arr': arrayIO.ArrayReader,
                     'nd2': nd2io.ND2Reader,
-                    'czi': cziio.CZIReader}
+                    'czi': cziio.CZIReader,
+                       'obi': oibio.OIFReader}
     else: # write
         formats = {'seq': imgSeqIO.WRITABLE_FORMATS,
                    'tif': multitifIO.WRITABLE_FORMATS,
@@ -83,7 +190,7 @@ def _switch(fn, read=True, *args, **kwds):
         
 
     ## --- JDK check----
-    _allfmt = formats['tif'] + formats['mrc'] + formats['seq'] + formats['bio'] + formats.get('nd2', ()) + formats.get('czi', ())
+    _allfmt = formats['tif'] + formats['mrc'] + formats['seq'] + formats['bio'] + formats.get('nd2', ()) + formats.get('czi', ()) + formats.get('oib', ())
     if ext not in _allfmt and ext in bioformatsIO.bioformats.READABLE_FORMATS:# and ext not in formats['bio'] and ext not in formats['seq']:
         raise ValueError(JDK_MSG % ext)
     #-------------
@@ -126,9 +233,11 @@ def _switch(fn, read=True, *args, **kwds):
             except:
                 raise ValueError('The input file %s was not readable' % fn)
     elif ext in nd2io.READABLE_FORMATS:
-        return klasses['nd2'](fn, *args, **kwds)
+        return _read_mod('nd2', *args, **kwds)
     elif ext in cziio.READABLE_FORMATS:
-        return klasses['czi'](fn, *args, **kwds)
+        return _read_mod('czi', *args, **kwds)
+    elif ext in oibio.READABLE_FORMATS:
+        return _read_mod('oib', *args, **kwds)
     elif read and ext in imgIO.READABLE_FORMATS:
         return imgIO.load(fn)
     elif ext in formats['mrc']:
@@ -143,6 +252,13 @@ def _switch(fn, read=True, *args, **kwds):
         except:
             raise ValueError('The input file name %s was not understood' % fn)
 
+def _read_mod(name='czi', *args, **kwds):
+    try:
+        return klasses[name](fn, *args, **kwds)
+    except Exception:
+        warnings.warn('Reading the file using %s failed, use bioformats instead, error message was %s' % (name, Exception), UserWarning)
+        return klasses['bio'](fn, *args, **kwds)
+        
 def load(fn):
     """
     return numpy array

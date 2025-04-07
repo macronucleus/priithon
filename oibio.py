@@ -10,17 +10,17 @@ try:
     import oiffile as oib # BSD-3-Clause
     # https://github.com/cgohlke/oiffile
     WRITABLE_FORMATS = ()
-    READABLE_FORMATS = ('oif',, 'oib')
+    READABLE_FORMATS = ('oif', 'oib') # oir is not supported yet
 except ImportError:
     WRITABLE_FORMATS = READABLE_FORMATS = ()
 
 
-class OIFReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
         """
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
 
     def openFile(self, series_id=0):
         """
@@ -31,7 +31,7 @@ class OIFReader(generalIO.GeneralReader):
         self.handle = self.fp.open_file(series)
         #self.tiff = tifffile.TiffFile(self.handle, name=series)
         self.handle._name = series
-        self.tiff = multitifIO.MultiTiffReader(self.handle)#, name=series)
+        self.tiff = multitifIO.Reader(self.handle)#, name=series)
         self.tiff.fp.filehandle._name = series
         
         self.readHeader()

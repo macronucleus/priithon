@@ -26,9 +26,9 @@ LENS_ID={
     10007: (100, 1.40, 1.518)
              }
 
-class MrcReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn, mode='r'):
-        generalIO.GeneralReader.__init__(self, fn, mode)
+        generalIO.Reader.__init__(self, fn, mode)
         self.flip_required = False
 
     def openFile(self):
@@ -154,14 +154,14 @@ class MrcReader(generalIO.GeneralReader):
         return a '''
 
 
-class MrcWriter(generalIO.GeneralWriter):
+class Writer(generalIO.Writer):
     def __init__(self, outfn, hdr=None, extInts=None, extFloats=None, metadata={}):
         """
         prepare your hdr and output filename
 
         metadata: goes to title (number of keys <= 10)
         """
-        generalIO.GeneralWriter.__init__(self, outfn, mode='w')
+        generalIO.Writer.__init__(self, outfn, mode='w')
         self.flip_required = False
         
         self.hdr = hdr
@@ -202,7 +202,7 @@ class MrcWriter(generalIO.GeneralWriter):
         """
         read dimensions, imgSequence, dtype, pixelsize from a reader
         """
-        if isinstance(rdr, MrcReader):
+        if isinstance(rdr, Reader):
             if hasattr(rdr.fp, 'extInts'):
                 self.setExtHdr(extInts=rdr.fp.extInts, extFloats=rdr.fp.extFloats)
             self.setDimFromMrcHdr(rdr.hdr)
@@ -601,7 +601,7 @@ def recalcMinMax(fn):
     """
     update scale in the header
     """
-    h = MrcReader(fn)
+    h = Reader(fn)
     hdr = makeHdr_like(h.hdr)
 
     o = Mrc3(fn, 'r+')

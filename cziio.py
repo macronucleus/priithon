@@ -13,12 +13,12 @@ except ImportError:
     
 WRITABLE_FORMATS = ()
 
-class CZIReader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
         """
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
 
     def openFile(self):
         """
@@ -77,10 +77,15 @@ class CZIReader(generalIO.GeneralReader):
         self.setPixelSize(**pdic)
 
         try:
-            self.optics_data['na'] = self.na = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']['LensNA']
+            obj = self.na = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']
+            if type(obj) == list: # lightsheet images
+                obj = obj[0]
+            self.optics_data['na'] = self.na = obj['LensNA']
+            
+            #self.optics_data['na'] = self.na = meta['ImageDocument']['Metadata']['Information']['Instrument']['Objectives']['Objective']['LensNA']
             self.optics_data['n1'] = self.n1 = img['ObjectiveSettings']['RefractiveIndex']
             
-        except KeyError:
+        except (KeyError, TypeError):
             pass
             
 

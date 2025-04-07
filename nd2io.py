@@ -18,12 +18,12 @@ except ImportError:
     WRITABLE_FORMATS = READABLE_FORMATS = ()
 
 
-class ND2Reader(generalIO.GeneralReader):
+class Reader(generalIO.Reader):
     def __init__(self, fn):
         """
         fn: file name
         """
-        generalIO.GeneralReader.__init__(self, fn)
+        generalIO.Reader.__init__(self, fn)
 
     def openFile(self):
         """
