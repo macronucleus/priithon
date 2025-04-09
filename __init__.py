@@ -91,7 +91,7 @@ def _switch(fn, read=True, *args, **kwds):
     #--- interplete ---
     # filename or fileseries
     if isinstance(fn, six.string_types):
-        if os.path.isfile(fn):
+        if (read and os.path.isfile(fn)) or not read:
             ext = os.path.splitext(fn)[1].replace(os.path.extsep, '')
         elif os.path.isdir(fn):
             fn = [os.path.join(fn, f) for f in os.listdir(fn)]
@@ -99,6 +99,7 @@ def _switch(fn, read=True, *args, **kwds):
             fn = glob.glob(fn + '*')
             if not fn:
                 raise ValueError('The input file name %s was not understood' % fn)
+            
     # arrayIO
     elif 'ndarray' == type(fn).__name__:
         return _modules['arr'].__getattribute__('Reader')(fn, *args, **kwds)
@@ -135,7 +136,7 @@ def _switch(fn, read=True, *args, **kwds):
     # tif and others
     else:
        # print(_modules.keys())
-        modules = dict([(name, module) for name, module in _modules.items() if name not in ('bio', 'seq', 'img', 'arr')])
+        modules = dict([(name, module) for name, module in _modules.items() if name not in ('bio', 'seq', 'arr', 'img')])
         for name, module in modules.items():
             #print(ext, _formats(read, name))
             if ext in _formats(read, name):
@@ -265,6 +266,9 @@ def load(fn):
     """
     if fn.endswith('.npy'):
         return N.load(fn)
+    elif fn.endswith(imgIO.READABLE_FORMATS):
+        return imgIO.load(fn)
+    
     h = Reader(fn)
     if type(h) == N.ndarray:
         a = h
