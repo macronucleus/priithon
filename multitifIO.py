@@ -377,6 +377,8 @@ class Writer(generalIO.Writer):
             if hasattr(self, 'nt') and hasattr(self, 'fp') and self.fp._storedshape:
                 shape = (self.nt,self.nz,self.nw,self.ny,self.nx)
                 if self.style == 'imagej':
+                   # if 'Channels' in self.metadata:
+                   #     self.metadata['channels'] = self.metadata.pop('Channels')
                     colormapped = self.fp._colormap is not None
                     isrgb = self.fp._storedshape[-1] in (3, 4)
                     #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
@@ -384,6 +386,8 @@ class Writer(generalIO.Writer):
                     #print('writing metaata', self.metadata)
                 elif self.style == 'ome':
                     #self.metadata['DimensionOrder'] = 'XY'
+                    if 'Channels' in self.metadata:
+                        self.metadata['Channel'] = self.metadata.pop('Channels')
                     if self.fp._subifdslevel < 0:
                         datashape = self.makeShape(squeeze=(False))#True)
                         storedshape = (N.prod(shape[:3]), 1, 1, self.ny, self.nx, 1)

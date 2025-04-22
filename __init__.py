@@ -503,7 +503,7 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
         if (ys.stop - ys.start) <= 0 or (xs.stop - xs.start) <= 0 or not (len(zs)) or not (len(ts)) or not (len(ws)):
             raise ValueError('The target dimension cannot be less than or equal to 0')
 
-        if type(h) == mrcIO.MrcReader:
+        if type(h) == mrcIO.Reader:
             hdr = mrcIO.makeHdrFromRdr(h)
             hdr.NumTimes = len(ts)
             hdr.NumWaves = len(ws)

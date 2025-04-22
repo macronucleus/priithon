@@ -195,6 +195,7 @@ class Writer(generalIO.Writer):
         self.hdr.ImgSequence = self.imgSequence
         self.hdr.wave[:self.nw] = self.wave[:self.nw]
         self.hdr.d[:] = self.pxlsiz[::-1]
+        self.hdr.LensNum = findLens(self.mag, self.na)
 
         self.writeHeader(self.hdr)
 
@@ -748,3 +749,9 @@ def nt_uint_switch(on=True):
         ret = 0
     Mrc.mrcHdr_dtype = list(zip(Mrc.mrcHdrNames, Mrc.mrcHdrFormats))
     return ret
+
+def findLens(mag=60, na=1.42):
+    for key, val in LENS_ID.items():
+        if val[0] == mag and val[1] == na:
+            return key
+    return 0
