@@ -398,14 +398,14 @@ class ImagePanel(wx.Panel):
     def loadImage2Memory(self, evt=False):
         # since bioformats is too slow, orthogonal view needs to read array data into memory
         # On my second thought, 2k x 2k image also takes long to read, it is better to load into memory always.
-        if (self.doc.nz > 1 or self.doc.nt > 1) and self.loadImgButton.IsEnabled() and issubclass(type(self.doc), imgio.generalIO.GeneralReader):
+        if (self.doc.nz > 1 or self.doc.nt > 1) and self.loadImgButton.IsEnabled() and issubclass(type(self.doc), imgio.generalIO.Reader):
             zlast = self.doc.zlast
             z = self.doc.z
             pxlsiz = self.doc.pxlsiz
             roi_start = self.doc.roi_start
             roi_size = self.doc.roi_size
             
-            self.doc = imgio.arrayIO.ArrayReader(self.doc)
+            self.doc = imgio.arrayIO.Reader(self.doc)
             self.doc.zlast = zlast
             self.doc.z = z
             self.doc.pxlsiz = pxlsiz
