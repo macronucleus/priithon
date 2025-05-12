@@ -266,6 +266,8 @@ def load(fn):
     """
     if fn.endswith('.npy'):
         return N.load(fn)
+    elif fn.endswith('.tif'):
+        pass
     elif fn.endswith(imgIO.READABLE_FORMATS):
         return imgIO.load(fn)
     
