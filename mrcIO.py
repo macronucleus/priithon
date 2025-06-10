@@ -441,6 +441,7 @@ def makeHdr_like(hdrSrc):
     hdr.NumWaves = hdrSrc.NumWaves[0]
     hdr.NumIntegers = hdrSrc.NumIntegers[0]
     hdr.NumFloats = hdrSrc.NumFloats[0]
+    hdr.LensNum = hdr.LensNum
     return hdr
 
 def makeHdrFromRdr(rdr):
