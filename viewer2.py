@@ -1012,10 +1012,11 @@ class GLViewer(GLViewerCommon):
         except AttributeError:
             pass
 
-        roi0 = 'ROI start (x,y,z):  %i %i %i' % tuple(self.mydoc.roi_start[::-1])
-        roi1 = 'ROI size  (x,y,z):  %i %i %i' % tuple(self.mydoc.roi_size[::-1])
-        parent.roi_label0.SetLabel(roi0)
-        parent.roi_label1.SetLabel(roi1)
+        if hasattr(self.mydoc, 'roi_start'):
+            roi0 = 'ROI start (x,y,z):  %i %i %i' % tuple(self.mydoc.roi_start[::-1])
+            roi1 = 'ROI size  (x,y,z):  %i %i %i' % tuple(self.mydoc.roi_size[::-1])
+            parent.roi_label0.SetLabel(roi0)
+            parent.roi_label1.SetLabel(roi1)
 
     
     def doLDown(self, xeff, yeff):
