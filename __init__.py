@@ -101,7 +101,7 @@ def _switch(fn, read=True, *args, **kwds):
                 raise ValueError('The input file name %s was not understood' % fn)
             
     # arrayIO
-    elif 'ndarray' == type(fn).__name__:
+    elif 'ndarray' in type(fn).__name__:
         return _modules['arr'].__getattribute__('Reader')(fn, *args, **kwds)
     # Reader or Writer 
     elif 'Reader' in type(fn).__name__ or 'Writer' in type(fn).__name__:

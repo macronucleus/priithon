@@ -153,6 +153,17 @@ class Reader(generalIO.Reader):
         
         return a '''
 
+    def getTimeStamp(self, acq_order='tzw'):
+        """
+        acq_order: acquisition order string
+
+        return as an array with dimension specified by acq_order
+        """
+        tt = self.fp.extFloats[:self.hdr.Num[-1],1]
+        order = [self.__dict__['n%s' % o] for o in acq_order]
+        tt = tt.reshape(order)
+        return N.squeeze(tt)
+
 
 class Writer(generalIO.Writer):
     def __init__(self, outfn, hdr=None, extInts=None, extFloats=None, metadata={}):
