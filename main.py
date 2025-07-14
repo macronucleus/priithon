@@ -94,13 +94,12 @@ class ImagePanel(wx.Panel):
             self.doc.zlast = 0
             self.addImageXY()
 
-        #self.zshape= self.doc.shape[:-2]
-
             
     def __del__(self):
+        print('caled')
         self._mgr.UnInit()
         self.doOnClose()
-
+        
     def doOnClose(self):
         pass
             
@@ -1183,6 +1182,8 @@ class MyFrame(wx.Frame):
     def onclose(self, evt=None):
         global viewers
         viewers[self.vid] = None
+
+        self.auiManager.UnInit()
 
         if evt:
             evt.GetEventObject().Destroy()
