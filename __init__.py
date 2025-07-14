@@ -123,9 +123,9 @@ def _switch(fn, read=True, *args, **kwds):
             raise ValueError('The directory or file names does not seem to contain image series')
 
     # ome.tif is written by BioformatsWriter
-    elif fn.endswith('ome.tif') and not read:
-        import tifffile
-        tifversion = tifffile.__version__.split('.')
+    elif fn.endswith('ome.tif') and not read and multitifIO.READABLE_FORMATS:
+        #import tifffile
+        tifversion = multitifIO.tifffile.__version__.split('.')
         if (int(tifversion[0]) == 2020 and int(tifversion[1]) >= 11) or int(tifversion[0]) > 2020:
             kwds2 = kwds.copy()
             kwds2['style'] = 'ome'
@@ -213,9 +213,9 @@ def _switch_0ld(fn, read=True, *args, **kwds):
             raise ValueError('The directory does not seem to contain image series')
 
     # ome.tif is written by BioformatsWriter
-    elif fn.endswith('ome.tif') and not read:
-        import tifffile
-        tifversion = tifffile.__version__.split('.')
+    elif fn.endswith('ome.tif') and not read and multitifIO.READABLE_FORMATS:
+        #import tifffile
+        tifversion = multitifIO.tifffile.__version__.split('.')
         if (int(tifversion[0]) == 2020 and int(tifversion[1]) >= 11) or int(tifversion[0]) > 2020:
             return klasses['tif'](fn, style='ome', *args, **kwds)
         else:
@@ -319,7 +319,7 @@ def save(arr, outfn, dimorder='twzyx', wave=[], pzyx=[.1,.1,.1], metadata={}):
         arr = arr.astype(N.complex64)
 
     # more than 5 dimension is saved in a tifffle
-    if arr.ndim > 5:
+    if arr.ndim > 5 and multitifIO.WRITABLE_FORMATS:
         if ext != '.tif':
             raise ValueError('dimension of %i can only be saved in tif format' % arr.ndim)
         multitifIO.tifffile.imsave(outfn, arr, metadata={'wave': wave}.update(metadata))
