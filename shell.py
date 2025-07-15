@@ -1,5 +1,31 @@
 
 from wx.py.shell import *
+from wx.py import introspect
+import six, warnings
+
+###---- introspect ---------------
+def hasattr(obj, attr):# am python3
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        try:
+            return bool(getattr(obj, attr, None))
+        except (NameError, ValueError):
+            return False
+
+#def hasattrAlwaysReturnsTrue(obj):
+#    return hasattr(obj, 'bogu5_123_aTTri8ute')
+
+class BytesIO_str(six.BytesIO):
+    def __init__(self, arg=b''):
+        if arg in six.string_types:
+            arg = arg.encode()
+        six.BytesIO.__init__(self, arg)
+
+introspect.hasattr = hasattr
+introspect.BytesIO = BytesIO_str
+#introspect.getRoot = getRoot
+
+#---------------------------------------
 
 class PriShellFrame(ShellFrame):
     def __init__(self, parent=None, id=-1, title='PyShell',
