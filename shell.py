@@ -12,18 +12,7 @@ def hasattr(obj, attr):# am python3
         except (NameError, ValueError):
             return False
 
-#def hasattrAlwaysReturnsTrue(obj):
-#    return hasattr(obj, 'bogu5_123_aTTri8ute')
-
-class BytesIO_str(six.BytesIO):
-    def __init__(self, arg=b''):
-        if arg in six.string_types:
-            arg = arg.encode()
-        six.BytesIO.__init__(self, arg)
-
 introspect.hasattr = hasattr
-introspect.BytesIO = BytesIO_str
-#introspect.getRoot = getRoot
 
 #---------------------------------------
 
@@ -184,6 +173,90 @@ class PriShell(Shell):
                 event.Skip()
             else:
                 self.clearCommand()
+
+                #seb 20070106: autocompletion 
+        elif not controlDown and key == wx.WXK_TAB:
+            #wx.Bell()
+            if self.AutoCompActive():
+                self.AutoCompCancel()
+
+            stoppos = self.promptPosEnd
+            command = self.GetTextRange(stoppos, currpos)
+            #self.autoCompleteShow(command)
+
+            if len(command) and command[-1] in ('(',):
+                self.ReplaceSelection('')
+                self.autoCallTipShow(command, alwaysShow=True)
+            else:
+                from wx.py import introspect
+                if sys.version_info.major == 2:
+                    import __main__
+                    from __main__ import __builtins__ as builtins
+                else:
+                    import __main__, builtins
+                #import introspect, __main__, __builtin__
+                root = introspect.getRoot(command)
+                if self.more and root=='': # pressing TAB to indent multi-line commands
+                    event.Skip()
+                    return                           
+
+
+                #print >> __main__.shell.stderr, "DEBUG root:", root
+                #print >> __main__.shell.stderr, "DEBUG command:", command
+                #print >> __main__.shell.stderr, "DEBUG command tokens:", '\n'.join(map(str,introspect.getTokens(command)))
+                # 20080908:  experiment with argument name completion
+                if root=='' and command:
+                    beforeParenthesis = command.rpartition('(')[0]
+                    if beforeParenthesis:
+                        #print >> __main__.shell.stderr, "DEBUG beforeParenthesis:", beforeParenthesis
+                        try:
+                            object = eval(beforeParenthesis, __main__.__dict__)
+                        except:
+                            #for debugging
+                            pass
+                            #import traceback
+                            #traceback.print_exc(file=__main__.shell.stderr)
+                        else:
+                            import inspect
+                            (args, varargs, varkw, defaults)=inspect.getargspec(object)
+                            if  varargs is not None:
+                                args.append( varargs )
+                            if  varkw is not None:
+                                args.append( varkw )
+                            #print >> __main__.shell.stderr, ' '.join(args)
+                            options = ' '.join([(s+'=') for s in args])
+                            offset=0
+                            self.AutoCompShow(offset, options)
+                else: # 20080908
+
+
+                    hasDot = root.rfind('.')
+                    if hasDot>=0:
+                        self.autoCompleteShow(command, offset=len(root)-hasDot-1)
+                    else:
+                        rootLower = root.lower()
+                        _list = [s for s in __main__.__dict__ if s.lower().startswith(rootLower)]
+                        _list.sort()
+
+                        _list2 = [s for s in builtins.__dict__ if s.lower().startswith(rootLower)]
+                        _list2.sort()
+
+                        # first matches from __main__ then from __builtin__
+                        #   TODO: add separator between the two
+                        #if len(_list):
+                        #    _list3 = _list + [] + _list2
+                        #else:
+                        #    _list3 = _list2
+                        if len(_list) or len(_list2):
+                            _list3 = _list + ['=====__builtins__:'] + _list2
+
+                            options = ' '.join(_list3)
+                            offset = len(root)
+                            self.AutoCompShow(offset, options)
+                            #if self.GetCurrentPos()<self.promptPosEnd:
+                            #    #self.SetCurrentPos(self.promptPosEnd+1)
+                            #    self.AppendText(' ')
+
 
         # Clear the current command
         elif key == wx.WXK_BACK and (rawControlDown or controlDown) and shiftDown:
