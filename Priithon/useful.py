@@ -38,6 +38,13 @@ try:
     import Priithon_bin.seb as S
 except:
     S = None
+
+try:
+    from imgio import Reader, Writer
+    import imgio
+except ImportError:
+    pass
+    
 from .usefulGeo import *
 
 #  >>> dir(A)

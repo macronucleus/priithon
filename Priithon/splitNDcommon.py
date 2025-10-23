@@ -225,6 +225,7 @@ class spvCommon:
     def setDefaultKeyShortcuts(self):
         self.keyShortcutTable[ 0, wx.WXK_NUMPAD_MULTIPLY] = self.OnAutoHistScale
         self.keyShortcutTable[ 0, 'h'] = self.OnAutoHistScale
+        self.keyShortcutTable[ wx.MOD_SHIFT, 'h'] = self.OnAutoHistScaleAll
         self.keyShortcutTable[ 0, 'l' ] = self.OnHistLog
         self.keyShortcutTable[ 0, 'f' ] = self.OnViewFFT  # CHECK view2
         self.keyShortcutTable[ wx.MOD_SHIFT, 'f' ] = self.OnViewFFTInv # CHECK view2

@@ -2114,7 +2114,7 @@ def vLeftClickZProfile(id=-1, avgBoxSize=1, s='-', slice=Ellipsis):
 
     data = v.data[slice]
 
-    if data.ndim != 3:
+    if (data.ndim != 3 and hasattr(v, 'img')) or (data.ndim != 4 and hasattr(v, 'imgL')):
         raise ValueError("ZProfile only works for 3D data (TODO: for 4+D)")
     nz = data.shape[0]
 
@@ -2138,7 +2138,7 @@ def vLeftClickZProfile(id=-1, avgBoxSize=1, s='-', slice=Ellipsis):
             #prof = mean2d(a[:,  y0:y1, x0:x1])   ##->  TypeError: Can't reshape non-contiguous numarray
             ploty( prof, symbolSize=0)#s )
         else:
-            ploty( data[ :, int(y), int(x) ], symbolSize=0)#s )
+            ploty( data[ ..., int(y), int(x) ], symbolSize=0)#s )
     def fg(x,y):
         if _plotprofile_avgSize >1:
             x0,y0,x1,y1 = v.poly
@@ -2174,7 +2174,10 @@ def vLeftClickLineProfile(id=-1, abscissa='line', s='-'):
             ys = list(map(int, N.arange(y0, y1, ddy)+.5))
             #print len(xs), len(ys)
             try:
-                vs = v.img[ ys,xs ]
+                if hasattr(v, 'img'): # Y.view()
+                    vs = v.img[ ys,xs ]
+                else: # Y.view2()
+                    vs = v.imgL[...,ys,xs]
                 if abscissa == 'x':
                     plotxy(xs, vs, s)#symbolSize=0)#s)
                 elif abscissa == 'y':
@@ -2223,7 +2226,10 @@ def vReplicateLineProfile(id0=-2, id1=-1, abscissa='line', s='+-', hold=1):
             ys = list(map(int, N.arange(y0, y1, ddy)+.5))
             #print len(xs), len(ys)
             try:
-                vs = v.img[ ys,xs ]
+                if hasattr(v, 'img'):
+                    vs = v.img[ ys,xs ]
+                else: # Y.view2
+                    vs = v.imgL[...,ys,xs]
                 if abscissa == 'x':
                     plotxy(xs, vs, s, hold=hold)
                 elif abscissa == 'y':
@@ -2233,7 +2239,15 @@ def vReplicateLineProfile(id0=-2, id1=-1, abscissa='line', s='+-', hold=1):
             except:
                 raise #print "line profile bug:", len(xs), len(ys)
 
+
+
+    def fg():
+        x0,y0,x1,y1 = poly
+        glLine(x0,y0,x1,y1, PriConfig.defaultGfxColor)
+            
     f(poly, v)
+
+    v.viewer.updateGlList(fg )
 
 
 def vLeftClickLineMeasure(id=-1, roundCoords2int=False):
