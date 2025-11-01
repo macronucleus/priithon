@@ -186,7 +186,10 @@ class PriShell(Shell):
 
             if len(command) and command[-1] in ('(',):
                 self.ReplaceSelection('')
-                self.autoCallTipShow(command, alwaysShow=True)
+                try:
+                    self.autoCallTipShow(command, alwaysShow=True)
+                except TypeError: # on linux alwaysShow unavailable
+                    self.autoCallTipShow(command)
             else:
                 from wx.py import introspect
                 if sys.version_info.major == 2:
