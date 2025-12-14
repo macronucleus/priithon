@@ -2314,9 +2314,10 @@ def load(fn):
         except (ValueError, ImportError):
             from .. import imgio
         try:
-            h = imgio.imgSeqIO.ImgSeqReader(fn)
+            h = imgio.imgSeqIO.Reader(fn)
         except ValueError: # labeling format unknown
-            a = N.array([load(os.path.join(fn, f)) for f in os.listdir(fn)])
+            a = N.array([load(os.path.join(fn, f)) for f in sorted(os.listdir(fn))])
+            return a
         a = N.squeeze(h.asarray())
         try:
             h.close()
