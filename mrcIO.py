@@ -243,7 +243,7 @@ class Writer(generalIO.Writer):
                     self.hdr.__setattr__('mmm1', [mi, ma, me])
                 else:
                     self.hdr.__setattr__('mm%i' % (w+1), [mi, ma])
-        
+                    
     def setDimFromMrcHdr(self, hdr):
         """
         set dimensions using a Mrc header

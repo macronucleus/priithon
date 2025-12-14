@@ -91,6 +91,7 @@ def _switch(fn, read=True, *args, **kwds):
     #--- interplete ---
     # filename or fileseries
     if isinstance(fn, six.string_types):
+        ext = ''
         if (read and os.path.isfile(fn)) or not read:
             ext = os.path.splitext(fn)[1].replace(os.path.extsep, '')
         elif os.path.isdir(fn):
@@ -116,7 +117,7 @@ def _switch(fn, read=True, *args, **kwds):
     # seq
     if (not isinstance(fn, six.string_types) and hasattr(fn, '__iter__')) or (read and not os.path.isfile(fn)):
 
-        fns = [ff for ff in fn if os.path.splitext(ff)[1].replace(os.path.extsep, '') in formats['seq']]
+        fns = [ff for ff in fn if os.path.splitext(ff)[1].replace(os.path.extsep, '') in _formats(read, 'seq')]
         if os.path.commonprefix(fns):
             return _klass(read, 'seq', fns, *args, **kwds)
         else:
