@@ -607,6 +607,7 @@ class Mrc2:
 
         if self._extHdrSize>0 and (self._extHdrNumInts>0 or self._extHdrNumFloats>0):
             nSecs = int( self._extHdrSize / self._extHdrBytesPerSec )
+
             self._extHdrArray = N.recarray(nSecs,#None,#self._f,
                                            formats="%di4,%df4"%(self._extHdrNumInts,
                                                                 self._extHdrNumFloats),

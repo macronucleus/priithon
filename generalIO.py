@@ -66,8 +66,8 @@ class Reader(object):
 
     def __exit__(self, errtype=None, errval=None, traceback=None):
         self.close()
-        if errtype:
-            raise errtype(errval)
+    #    if errtype:
+    #        raise errtype(errval)
     
     def close(self):
         """

@@ -6,12 +6,14 @@ import six
 import numpy as N
 
 if sys.version_info.major == 2:
-    import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
+    import generalIO, Mrc, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
 elif sys.version_info.major >= 3:
     try:
-        from . import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
+        from . import generalIO, Mrc, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
     except ImportError:
         from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
+        
+reload(Mrc)
 
 uninit_javabridge = bioformatsIO.uninit_javabridge
 
@@ -36,6 +38,7 @@ for name, module in _modules.items():
     WRITABLE_FORMATS += module.WRITABLE_FORMATS
 READABLE_FORMATS = tuple(sorted(list(set(READABLE_FORMATS))))
 WRITABLE_FORMATS = tuple(sorted(list(set(WRITABLE_FORMATS))))
+
 
 JDK_MSG = 'Reading/Writing your image format "%s" is not supported.'
 if not bioformatsIO.HAS_JDK:
@@ -514,12 +517,13 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
             hdr.Num[1] = ys.stop - ys.start
             hdr.Num[0] = xs.stop - xs.start
             waves = hdr.wave[ws]
-            #print(ws, waves, hdr.wave)
+            print(ws, waves, hdr.wave)
             hdr.wave[:len(waves)] = waves
             o = Writer(out, hdr=hdr)
         else:
             o = Writer(out, h)
-            o.setDim(nx=xs.stop - xs.start, ny=ys.stop - ys.start, nz=len(zs), nt=len(ts), nw=len(ws))
+            o.setDim(nx=xs.stop - xs.start, ny=ys.stop - ys.start, nz=len(zs), nt=len(ts), nw=len(ws), wave=N.take(h.wave,list(ws)))
+            print(ws)
         
         for t0, t1 in enumerate(ts):
             for w0, w1 in enumerate(ws):

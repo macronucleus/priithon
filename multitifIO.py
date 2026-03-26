@@ -138,6 +138,7 @@ class Reader(generalIO.Reader):
             raise generalIO.ImageIOError('data type not found')
             
         waves = self.readChannelInfo(nw, waves)
+        self.readObjectiveInfo()
 
         self.setDim(p.imagewidth, p.imagelength, nz, nt, nw, dtype, waves, imgSeq)
         #self.setPixelSize(p.samplesperpixel)
@@ -284,6 +285,16 @@ class Reader(generalIO.Reader):
             #else:
             #    waves = [eval(w) for w in self.metadata['waves'].split(',')]
         return waves
+
+    def readObjectiveInfo(self):
+        if 0:#self.fp.is_ome:
+            obj = self.metadata['Image'].get('objective_settings')
+        elif 0:#self.fp.is_imagej:
+            obj = self.metadata['Info']
+        elif 'na' in self.metadata:
+            self.na = self.metadata['na']
+            if 'n1' in self.metadata:
+                self.n1 = self.metadata['n1']
 
                                 
     def seekSec(self, i=0):

@@ -369,6 +369,7 @@ class Writer(generalIO.Writer):
         ns = nt * nw * nz
             
         self.fp.makeExtendedHdr(ni, nf, nSecs=ns) # this creates many instances
+
         #self.fp = addExtHdrFromExt(self.fp, ni,nf)
                                        # nf, self.fp.extInts, self.fp.extFloats)
         #self.fp.
@@ -380,6 +381,8 @@ class Writer(generalIO.Writer):
                 for w in range(h.nw):
                     for z in range(h.nz):
                         i = h.findFileIdx(t=t, w=w, z=z)
+                        if h.fp.extInts.shape[0] <= i:
+                            continue
                         ei = h.fp.extInts[i]
                         ef = h.fp.extFloats[i]
                         if along == 't':
