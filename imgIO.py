@@ -147,6 +147,8 @@ def save(arr, outfn, rescaleTo8bit=True, rgbOrder='rgba'):
 
     if backend == 'PIL':
         arr = arr[::-1]
+        img = Image.fromarray(arr)
+        old="""
         if arr.ndim == 2:
             #ny, nx = arr.shape
             if arr.dtype.type == N.uint8:
@@ -158,8 +160,9 @@ def save(arr, outfn, rescaleTo8bit=True, rgbOrder='rgba'):
             else:
                 raise ValueError("unsupported array datatype")
             img = Image.frombytes(mode, (nx,ny), arr.tostring())
+            print('new file')
         else:
-            img = Image.frombytes("RGBA"[:nc], (nx,ny), arr.tostring())
+            img = Image.frombytes("RGBA"[:nc], (nx,ny), arr.tostring())"""
         img.save(outfn)
     elif backend == 'wx' and not outfn.endswith(('tif', 'tiff')):
         arr = arr[::-1]

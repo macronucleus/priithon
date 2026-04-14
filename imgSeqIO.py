@@ -6,6 +6,7 @@ try:
     from . import generalIO, imgIO
 except ImportError:
     import generalIO, imgIO
+from common import fntools
 
 WRITABLE_FORMATS = imgIO.WRITABLE_FORMATS
 READABLE_FORMATS = imgIO.READABLE_FORMATS
@@ -184,6 +185,10 @@ class Writer(generalIO.Writer):
 
     def openFile(self):
         self.fp = None
+
+        self.dr = os.path.join(self.dr, os.path.splitext(self.file)[0])
+        if not os.path.isdir(self.dr):
+            os.mkdir(self.dr)
         
     # funcs for output
     def rescaleTo8bit(self, arr=None):
@@ -229,9 +234,6 @@ class Writer(generalIO.Writer):
         self.imgSequence = imgSequence
         self.dtype = dtype
 
-        #if self.multipage:
-        #    self._setSecSize()
-        #else:
         self._setSuffix()
 
     def setDimFromMrcHdr(self, hdr):
@@ -245,9 +247,6 @@ class Writer(generalIO.Writer):
         self.imgSequence = hdr.ImgSequence
         self.dtype = Mrc.MrcMode2dtype(hdr.PixelType)
 
-        #if self.multipage:
-        #    self._setSecSize()
-        #else:
         self._setSuffix()
 
     # funcs for single imgs
@@ -263,7 +262,8 @@ class Writer(generalIO.Writer):
                 digit = int(N.log10(ns*10))
                 prefix = '_%s' % d
                 suffix +=  prefix + '%0' + str(digit) + 'd'
-        self.outsuf = fntools.appendToBasename(self.fn, suffix)
+        fn = os.path.join(self.dr, self.file)
+        self.outsuf = fntools.appendToBasename(fn, suffix) #self.fn, suffix)
         self.wtz_name = [wtz[0] for wtz in suffix.split('_')[1:]]
 
     def _getOutFn(self, t=0, w=0, z=0):
@@ -277,7 +277,7 @@ class Writer(generalIO.Writer):
         
         # astype changes byteorder as well
         arr = arr.astype(self.dtype)
-        if has(self._rescaleTo8bit, '__iter__'):
+        if hasattr(self._rescaleTo8bit, '__iter__'):
             arr = (arr-self._rescaleTo8bit[0])*255./self._rescaleTo8bit[1]
             rescaleTo8bit = False
         else:
