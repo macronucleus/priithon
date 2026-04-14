@@ -368,12 +368,16 @@ def save(arr, outfn, dimorder='twzyx', wave=[], pzyx=[.1,.1,.1], metadata={}):
     
     
 
-def copy(fn, out='test.dv'):
+def copy(fn, out='test.dv', imgseq=False):
     """
     return Reader of the output file
     """
     h = Reader(fn)
-    o = Writer(out, h)
+    if imgseq:
+        o = imgSeqIO.Writer(out)
+        o.setFromReader(h)
+    else:
+        o = Writer(out, h)
     for t in range(h.nt):
         for w in range(h.nw):
             a = h.get3DArr(t=t, w=w)
@@ -381,8 +385,10 @@ def copy(fn, out='test.dv'):
     h.close()
     o.close()
 
-    return Reader(out)
-
+    if imgseq:
+        return Reader(os.path.splitext(out)[0])
+    else:
+        return Reader(out)
 
 def merge(fns, out=None, along='t'):
     if not out:

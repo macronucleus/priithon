@@ -129,11 +129,45 @@ class Reader(generalIO.Reader):
             num.append((ndims, fn))
         num.sort()
         self.fns = [fn for ndims, fn in num]
-        
 
+        
         return nztw, imgseq
 
 
+    def infer_sprintf_format(self):
+        filenames = self.fns
+        dirname = os.path.dirname(filenames[0])
+        basenames = [os.path.basename(f) for f in filenames]
+
+        # 各ファイル名から数値を抽出
+        numbers_per_file = [re.findall(r'\d+', name) for name in basenames]
+        num_slots = len(numbers_per_file[0])
+
+        # 各スロットごとに「全ファイルで同一か？」と「最大桁数」を評価
+        slot_info = []
+        for i in range(num_slots):
+            values = [nums[i] for nums in numbers_per_file]
+            is_variable = len(set(values)) > 1
+            max_width = max(len(v) for v in values)
+            slot_info.append((is_variable, max_width, values[0]))
+
+        # テンプレート生成
+        slot_iter = iter(slot_info)
+
+        def repl(match):
+            is_variable, width, fixed_value = next(slot_iter)
+            if not is_variable:
+                return fixed_value
+            if width > 1:
+                return f"%0{width}d"
+            else:
+                return "%d"
+
+        sprintf_basename = re.sub(r'\d+', repl, basenames[0])
+        return os.path.join(dirname, sprintf_basename)
+
+
+    
     # getting array
 
     def readSec(self, i=0):
@@ -318,4 +352,5 @@ class Writer(generalIO.Writer):
 
         for z, a in enumerate(arr):
             self.writeArr(a, t=t, w=w, z=z)
+
 
