@@ -134,7 +134,7 @@ class Reader(generalIO.Reader):
         return nztw, imgseq
 
 
-    def infer_sprintf_format(self):
+    def get_sprintf_format(self):
         filenames = self.fns
         dirname = os.path.dirname(filenames[0])
         basenames = [os.path.basename(f) for f in filenames]

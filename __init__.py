@@ -126,9 +126,8 @@ def _switch(fn, read=True, *args, **kwds):
         else:
             raise ValueError('The directory or file names does not seem to contain image series')
 
-    # ome.tif is written by BioformatsWriter
+    # writing ome.tiff
     elif fn.endswith('ome.tif') and not read and multitifIO.READABLE_FORMATS:
-        #import tifffile
         tifversion = multitifIO.tifffile.__version__.split('.')
         if (int(tifversion[0]) == 2020 and int(tifversion[1]) >= 11) or int(tifversion[0]) > 2020:
             kwds2 = kwds.copy()
@@ -136,13 +135,12 @@ def _switch(fn, read=True, *args, **kwds):
             return _klass(read, 'tif', fn, *args, **kwds2)
         else:
             return _klass(read, 'bio', fn, *args, **kwds)
-
-    # tif and others
+        
+    # others
     else:
        # print(_modules.keys())
         modules = dict([(name, module) for name, module in _modules.items() if name not in ('bio', 'seq', 'arr', 'img')])
         for name, module in modules.items():
-            #print(ext, _formats(read, name))
             if ext in _formats(read, name):
                 return _klass(read, name, fn, *args, **kwds)
 
@@ -270,8 +268,12 @@ def load(fn):
     """
     if fn.endswith('.npy'):
         return N.load(fn)
-    elif fn.endswith('.tif'):
-        pass
+    elif fn.endswith('.tif') and multitifIO.READABLE_FORMATS:
+        try:
+            h = Reader(fn)
+            a = h.readSec(0)
+        except:
+            return imgIO.load(fn)
     elif fn.endswith(imgIO.READABLE_FORMATS):
         return imgIO.load(fn)
     

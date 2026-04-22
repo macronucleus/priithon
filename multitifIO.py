@@ -330,6 +330,8 @@ class Reader(generalIO.Reader):
             byteorder = self.fp.byteorder + series.dtype.char
             ndata = tifffile.product(series.shape[-2:])
             dtype = N.dtype(byteorder)
+            if series.offset == None:
+                series.offset = 0
             self.handle.seek(series.offset + (ndata * dtype.itemsize * i))
 
             parameters = inspect.signature(self.handle.read_array)
