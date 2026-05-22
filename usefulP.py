@@ -633,7 +633,7 @@ def _formatcsm(c, overwriteHold=False):
     #print(c, csm)#, fig._sebCurrentColorIndex)
 
     coldic = {'r': 'red', 'g': 'green', 'b': 'blue', 'k': 'black', 'c': 'cyan', 'm': 'magenta'}
-    # olors can be names such as 'red' or hex strings '#RRGGBB'. by default, they are set by the theme
+    # colors can be names such as 'red' or hex strings '#RRGGBB'. by default, they are set by the theme
     stldic = {'-': 'solid', '=': 'dashed', ':': 'dotted', ';': 'dash-dot'}
     # styles can be one of 'solid', 'short dashed', 'dash-dot', 'dashed', 'dotted', 'long-dashed'.
     # markers can be one of 'no symbol', 'o', '+', 'x', 'square', 'diamond', 'thin diamond', '^', 'v', '>', '<', '|', '_', 'hexagon', 'pentagon', 'tripod 1', or 'tripod 2'
