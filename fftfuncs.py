@@ -567,6 +567,26 @@ def sincArr(shape=defshape, radius=30, orig=None, wrap=0,crop=0, dtype='float32'
                             lambda r: sinc(r/radius2), \
                             orig, wrap, dtype)
 
+def ellipticalArr(shape=(128,128), radius=(30,50), orig=None, valIn=1, valOut=0, dtype='float32'):
+    # AM 20260108
+    if hasattr(radius, '__iter__'):
+        assert len(shape) == len(radius)
+    else:
+        radius = [radius] * len(shape)
+    r_fact = N.divide(radius, radius[0])
+    
+    if orig is None:
+        center = N.divide(shape, 2)
+    else:
+        assert len(shape) == len(orig)
+        center = N.array(orig)
+        
+    inds = N.indices(shape, N.float32)
+    inds = ((inds.T - center) / r_fact).T
+    rad = N.sqrt(N.sum(inds ** 2, axis=0))
+    elip = N.where(rad < radius[0], valIn, valOut)
+    return elip.astype(dtype)
+
 
 def gaussian(r, dim=1, sigma=1., integralScale=None, peakVal=None):
     """returns n-dim Gaussian centered at 0
