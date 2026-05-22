@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """plot functions in Y module: Y.plot...
 """
 __author__  = "Sebastian Haase <haase@msg.ucsf.edu>"
