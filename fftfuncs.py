@@ -1020,7 +1020,7 @@ def rfft(a, axes=None, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
         a = a[...,:-1]
     
     if a.dtype.type not in fftw.RTYPES:
-        a = N.asarray(a, minFdtype)
+        a = N.asarray(a.real, minFdtype)
 
     return fftw.rfft(a, axes=axes, nthreads=nthreads)
 
@@ -1055,7 +1055,7 @@ def rsfft(a, axes=None, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
       minFdtype
     """
     if a.dtype.type not in fftw.RTYPES:
-        a = N.asarray(a, minFdtype)
+        a = N.asarray(a.real, minFdtype)
 
     return fftw.rfft(N.fft.ifftshift(a), axes=axes, nthreads=nthreads)
 

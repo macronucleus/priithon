@@ -782,18 +782,18 @@ def findMin(arr):
     val = a1d[idx]
     return (val,) + ids
 
-def min(arr):
-    arr = N.asarray(arr)
-    return arr.min()
+#def min(arr):
+#    arr = N.asarray(arr)
+#    return arr.min()
 
-def max(arr):
-    arr = N.asarray(arr)
-    return arr.max()
+#def max(arr):
+#    arr = N.asarray(arr)
+#    return arr.max()
 
-def median(arr):
+#def median(arr):
     #arr = _getGoodifiedArray(arr)
     #return S.median( arr )
-    return N.median(arr)
+#    return N.median(arr)
 
 #def median2(arr):
 #    """returns both median and "median deviation" (tuple)
@@ -803,14 +803,14 @@ def median(arr):
 #    return S.median2( arr )
 
 
-def mean(arr):
+#def mean(arr):
     #arr = _getGoodifiedArray(arr)
     #return S.mean( arr )  # CHECK if should use ns.mean
-    return N.mean(arr)
+#    return N.mean(arr)
 
-def stddev(arr):
-    arr = N.asarray(arr)
-    return N.std(arr.flat)
+#def stddev(arr):
+#    arr = N.asarray(arr)
+#    return N.std(arr.flat)
 
 _FWHM_over_gaussStddev = 2. * N.sqrt(2.*N.log(2.)) 
 
@@ -988,7 +988,7 @@ def median2d(arr, outtype=None):
 
     for i in range( bb.shape[0] ):
         arr = _getGoodifiedArray(aarr[i])
-        bb[i] = median( arr )
+        bb[i] = N.median( arr )
 
     return b
 def median22d(arr, outtype=None):
@@ -3217,6 +3217,79 @@ def calc_threshold_otsu3(a, histYX=None, retEM=False, retImg=False):
     else:
         return (x1,x2,x3)
 
+"""
+calc_threshold_triangl created by Claude
+"""
+    
+import numpy as np
+
+def _normalize(image, p_low=0.0, p_high=99.99):
+    """ロバスト正規化: パーセンタイルで外れ値(ホットピクセル/負値)をクリップして[0,1]へ。
+    戻り値: (正規化画像, lo, hi)。lo/hi は閾値を元の強度へ戻すための係数。"""
+    image = np.asarray(image, dtype=np.float64)
+    lo = np.percentile(image, p_low)
+    hi = np.percentile(image, p_high)
+    if hi <= lo:                      # 平坦な画像などの保険
+        hi = lo + 1.0
+    norm = np.clip((image - lo) / (hi - lo), 0.0, 1.0)
+    return norm, lo, hi
+
+def calc_threshold_triangle(image, factor=5.0, offset=0.0):
+#def threshold_triangle(image, nbins=256, p_low=0.0, p_high=99.99,
+ #                      return_normalized=False):
+
+    nbins=256
+    p_low=0.0
+    p_high=99.99
+    
+    image = np.asarray(image)
+
+    # --- 16/32bit対策: 正規化してから[0,1]でヒストグラム ---
+    norm, lo, hi = _normalize(image, p_low, p_high)
+    hist, bin_edges = np.histogram(norm.ravel(), bins=nbins, range=(0.0, 1.0))
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+    # 非ゼロ範囲とピーク
+    nz = np.nonzero(hist)[0]
+    arg_low, arg_high = int(nz[0]), int(nz[-1])
+    arg_peak = int(np.argmax(hist))
+
+    arg_low = max(arg_low - 1, 0)
+    arg_high = min(arg_high + 1, nbins - 1)
+
+    # 長い裾が左側に来るよう必要なら反転
+    flip = (arg_peak - arg_low) < (arg_high - arg_peak)
+    if flip:
+        hist = hist[::-1]
+        arg_peak = nbins - 1 - arg_peak
+        arg_low = nbins - 1 - arg_high
+
+    # ピークと基準点を結ぶ弦からの垂直距離が最大のビン
+    width = arg_peak - arg_low
+    height = float(hist[arg_peak] - hist[arg_low])
+    idx = np.arange(arg_low, arg_peak + 1)
+    distances = height * (idx - arg_low) - width * (hist[idx] - hist[arg_low])
+    level = int(idx[np.argmax(distances)])
+
+    if flip:
+        level = nbins - 1 - level
+
+    t_norm = float(bin_centers[level])
+    #if return_normalized:
+    #    return t_norm                 # [0,1]スケールの閾値が欲しい場合
+    t = t_norm * (hi - lo) + lo     # 元の強度スケールへ戻す（生画像にそのまま適用可）
+    return t * factor + offset
+
+
+def get_binary(image, threshold):
+    return (image > threshold).astype(N.uint8)
+
+    
+# Example binary segmentation
+# thresh = triangle_threshold(image)
+# binary_image = image > thresh
+
+    
 
 ###############################################################
 ###############################################################
@@ -3385,7 +3458,7 @@ def loadTxt(fname, ndim=3, dtype=None, delimiter=None, skipNlines=0,
             X = Xii[ ii ] = []
 
         from builtins import max
-        iiMax = [max(j,k) for j,k in zip(iiMax,ii)]
+        iiMax = [N.max(j,k) for j,k in zip(iiMax,ii)]
         X.append(row)
 
     # convert list of rows into (real) ndarrays; for each >2 dimensional index separately
@@ -3394,7 +3467,7 @@ def loadTxt(fname, ndim=3, dtype=None, delimiter=None, skipNlines=0,
         Xii[ii] = X = N.array(X, dtype)
         r,c = X.shape
         if r==1 or c==1:
-            X.shape = max([r,c]),
+            X.shape = N.max([r,c]),
 
 
     if ndim2 == 0:
