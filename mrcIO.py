@@ -94,7 +94,7 @@ class Reader(generalIO.Reader):
                     self.exc[w] = self.fp.extFloats[i,10]
 
         # objective
-        self.mag, self.na, self.n1 = LENS_ID.get(int(self.fp.hdr.LensNum), (generalIO.MAG, generalIO.NA, generalIO.N1))
+        self.mag, self.na, self.n1 = LENS_ID.get(self.fp.hdr.LensNum.item(), (generalIO.MAG, generalIO.NA, generalIO.N1))
             
             #self.exc = self.fp.extFloats[:nw,10]
 

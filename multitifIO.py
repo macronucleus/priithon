@@ -28,13 +28,18 @@ except ImportError:
 
 IMAGEJ_METADATA_TYPES = ['Info', 'Labels', 'Ranges', 'LUTs', 'Plot', 'ROI', 'Overlays']
 
-PXUNIT_FACTORS = {'m': 0, 'mm': -3, u'\xb5'+'m': -6, 'nm': -9, 'micron': -6, 'um': -6}
+PXUNIT_FACTORS = {'m': 0, 'mm': -3, u'\xb5'+'m': -6, 'nm': -9, 'micron': -6, 'um': -6, 'cm': -2, 'inch': -3} # inch is approximate
 
+IMAGEJ_RESUNIT = {2: 'inch', 3: 'cm', 4: 'mm', 5: u'\xb5'+'m'}
 
 def _convertUnit(val, fromwhat='mm', towhat=u'\xb5'+'m'):
     factors = PXUNIT_FACTORS
     factor = factors[fromwhat] - factors[towhat] or 0
-    return float(val) * 10 ** factor
+    if fromwhat == 'inch':
+        coeff = 25.4
+    else:
+        coeff = 1.0
+    return float(val) * 10 ** factor / coeff
 
 class Reader(generalIO.Reader):
     def __init__(self, fn):
@@ -154,119 +159,134 @@ class Reader(generalIO.Reader):
         """
         read pixel size and extra info
         """
+        self.metadata = {}
         self.ex_metadata = {}
         p = self.fp.pages[0]
+        found = False
 
-        if self.fp.is_micromanager: # also is_ome and is_imagej
-            self.metadata = meta = self.fp.micromanager_metadata['Summary']
-            px = abs(meta.get('PixelSize_um', 0.1))
-            if not px:
-                px = 0.1
-            asp = meta.get('PixelAspect', 1)
-            py = px * asp # is this correct?
-            pz = abs(meta.get('z-step_um', 0.3))
-            if not pz:
-                pz = 0.3
-            self.setPixelSize(pz, py, px)
+        if self.fp.is_micromanager and self.fp.micromanager_metadata['Summary']: # also is_ome and is_imagej
+            meta = self.fp.micromanager_metadata['Summary']
+            if meta:
+                px = abs(meta.get('PixelSize_um', 0.1))
+                if not px:
+                    px = 0.1
+                asp = meta.get('PixelAspect', 1)
+                py = px * asp # is this correct?
+                pz = abs(meta.get('z-step_um', 0.3))
+                if not pz:
+                    pz = 0.3
+                self.setPixelSize(pz, py, px)
+                self.metadata.update(meta)
+                found = True
         
-        elif self.fp.is_ome:
+        if self.fp.is_ome and not found:
             tifversion = tifffile.__version__.split('.')
             if int(tifversion[0]) >= 2020:
-                self.metadata = xml2dict(self.fp.ome_metadata)
+                meta = xml2dict(self.fp.ome_metadata)
             else:
-                self.metadata = self.fp.ome_metadata
+                meta = self.fp.ome_metadata
             if 'OME' in self.metadata:
-                self.metadata = meta = self.metadata['OME']
-            else:
-                self.metadata = meta = self.metadata
-            # pixel size
-            px = meta['Image']['Pixels']
-            pxlsiz = [0.1, 0.1, 0.1]
-            for d, dim in enumerate(('Z', 'Y', 'X')):
-                if px['PhysicalSize%sUnit' % dim] in PXUNIT_FACTORS: # unit can be "pixel"
-                    pxlsiz[d] = _convertUnit(px['PhysicalSize%s' % dim], px['PhysicalSize%sUnit' % dim])
-            self.setPixelSize(*pxlsiz)
+                meta = meta['OME']
+            self.metadata.update(meta)
 
-            if meta.get('StructuredAnnotations'):
-                sas = meta['StructuredAnnotations']['XMLAnnotation']
-                if type(sas) == list:
-                    for sa in sas: # list
-                        kv = sa['Value']['OriginalMetadata']
+            if 'Image' in meta:
+                # pixel size
+                px = meta['Image']['Pixels']
+                pxlsiz = [0.1, 0.1, 0.1]
+                for d, dim in enumerate(('Z', 'Y', 'X')):
+                    if px['PhysicalSize%sUnit' % dim] in PXUNIT_FACTORS: # unit can be "pixel"
+                        pxlsiz[d] = _convertUnit(px['PhysicalSize%s' % dim], px['PhysicalSize%sUnit' % dim])
+                self.setPixelSize(*pxlsiz)
+
+                if meta.get('StructuredAnnotations'):
+                    sas = meta['StructuredAnnotations']['XMLAnnotation']
+                    if type(sas) == list:
+                        for sa in sas: # list
+                            kv = sa['Value']['OriginalMetadata']
+                            self.metadata[kv['Key']] = kv['Value']
+                    elif type(sas) == dict:
+                        kv = sas['Value']['OriginalMetadata']
                         self.metadata[kv['Key']] = kv['Value']
-                elif type(sas) == dict:
-                    kv = sas['Value']['OriginalMetadata']
-                    self.metadata[kv['Key']] = kv['Value']
+                found = True
                 
-        elif self.fp.is_imagej:
-            self.metadata = meta = self.fp.imagej_metadata
+        if self.fp.is_imagej and not found:
+            meta = self.fp.imagej_metadata
             if 'spacing' in meta:
                 pz = meta['spacing']
+                unit = meta['unit']
+                pz = _convertUnit(pz, unit)
+                
                 xr = p.tags['XResolution']
                 px = xr.value[1]/xr.value[0]
                 yr = p.tags['YResolution']
                 py = yr.value[1]/yr.value[0]
-                unit = meta['unit']
-                pz = _convertUnit(pz, unit)
-                self.setPixelSize(pz, py, px)
-            else:
-                self.setPixelSize(0.3, 0.1, 0.1)
+                if 'ResolutionUnit' in p.tags:
+                    unit = p.tags['ResolutionUnit'].value
+                    if unit in IMAGEJ_RESUNIT:
+                        unit = IMAGEJ_RESUNIT[unit]
+                        py = _convertUnit(py, unit)
+                        px = _convertUnit(px, unit)
 
-            #if 'Info' in meta:
-            #    for m in meta['Info'].split('\n')[13:]:
-            #        mm = m.split(' = ')
-            #        if len(mm) == 2:
-            #            key, val = mm
-            #            self.ex_metadata[key] = val
+                self.setPixelSize(pz, py, px)
+                found = True
+
             temp_meta = copy.deepcopy(meta)
             for key, value in meta.items():
                 if key in IMAGEJ_METADATA_TYPES:
                     self.ex_metadata[key] = value
                     if key in temp_meta:
                         del temp_meta[key]
-            self.metadata = temp_meta
+            self.metadata.update(temp_meta)
 
-        elif self.fp.is_lsm:
-            self.metadata = meta = self.fp.lsm_metadata
+        if self.fp.is_lsm and not found:
+            meta = self.fp.lsm_metadata
             pz = _convertUnit(meta['VoxelSizeZ'], 'm', 'micron')
             py = _convertUnit(meta['VoxelSizeY'], 'm', 'micron')
             px = _convertUnit(meta['VoxelSizeX'], 'm', 'micron')
             self.setPixelSize(pz, py, px)
+            self.metadata.update(meta)
 
-        else:
-            
+        if not found:
             self.setPixelSize(0.3, 0.1, 0.1)
 
 
     def readChannelInfo(self, nw, waves):
+        found = False
         if self.fp.is_micromanager:
             # my code uses wavelength a lot, and therefore, string name is not accepted...
             #waves = self.metadata['ChNames']
+            #if "EmissionWavelength" in self.metadata:
+                
             self.nw = nw
             self.wave = self.makeWaves()#N.arange(400, 700, 300//nw)[:nw]
         
-        elif self.fp.is_ome:
-            px = self.metadata['Image']['Pixels']
-            for w in range(nw):
-                channels = px['Channel']
-                if type(channels) == list:
-                    channel = channels[w]
-                else:
-                    channel = channels
-                unit = channel.get('EmissionWavelengthUnit', 'nm')
-                wave = channel.get('EmissionWavelength')
-                if wave is not None:
-                    waves[w] = _convertUnit(wave, unit, 'nm')
-        elif self.fp.is_imagej and 'Info' in self.metadata:
+        if self.fp.is_ome:
+            if 'Image' in self.metadata:
+                px = self.metadata['Image']['Pixels']
+                for w in range(nw):
+                    channels = px['Channel']
+                    if type(channels) == list:
+                        channel = channels[w]
+                    else:
+                        channel = channels
+                    unit = channel.get('EmissionWavelengthUnit', 'nm')
+                    wave = channel.get('EmissionWavelength')
+                    if wave is not None:
+                        waves[w] = _convertUnit(wave, unit, 'nm')
+                found= True
+                
+        if self.fp.is_imagej and 'Info' in self.metadata and not found:
             for m in self.metadata['Info'].split('\n')[13:]:
-                    mm = m.split(' = ')
-                    if len(mm) == 2:
-                        key, val = mm
-                        # reading wavelength of tif from DV format ...
-                        if key.startswith('Wavelength') and key.endswith('nm)'):
-                            channel = int(key.split(' ')[1]) - 1
-                            if channel < nw:
-                                waves[channel] = eval(val)
-        elif self.fp.is_lsm:
+                mm = m.split(' = ')
+                if len(mm) == 2:
+                    key, val = mm
+                    # reading wavelength of tif from DV format ...
+                    if key.startswith('Wavelength') and key.endswith('nm)'):
+                        channel = int(key.split(' ')[1]) - 1
+                        if channel < nw:
+                            waves[channel] = eval(val)
+                            found = True
+        if self.fp.is_lsm and not found:
             channel = self.metadata['ChannelColors']['Colors']
             color_code = N.array((650, 515, 450, 0), N.float32)
             #waves = []
@@ -277,7 +297,7 @@ class Reader(generalIO.Reader):
                 else:
                     waves[w] = generalIO.WAVE_START - 50
         
-        elif 'waves' in self.metadata:
+        if 'waves' in self.metadata and not found:
             if isinstance(self.metadata['waves'], six.string_types):#type(self.metadata['waves']) in (int, float):
                 waves = [eval(w) for w in self.metadata['waves'].split(',')]
             else:
@@ -727,9 +747,10 @@ def xml2dict(xml, sanitize=True, prefix=None):
     {'root': {'key': 1, 'attr': 'name'}}
 
     """
-    from collections import defaultdict  # delayed import
+   # from collections import defaultdict  # delayed import
     from xml.etree import cElementTree as etree  # delayed import
 
+    old="""
     at = tx = ''
     if prefix:
         at, tx = prefix
@@ -757,13 +778,51 @@ def xml2dict(xml, sanitize=True, prefix=None):
                     d[key][tx + 'value'] = astype(text)
             else:
                 d[key] = astype(text)
-        return d
+        return d"""
 
-    return etree2dict(etree.fromstring(xml))
+    return etree2dict(etree.fromstring(xml), sanitize, prefix)
+
+def etree2dict(t, sanitize=True, prefix=None):
+    from collections import defaultdict  # delayed import
+
+    at = tx = ''
+    if prefix:
+        at, tx = prefix
+
+    # adapted from https://stackoverflow.com/a/10077069/453463
+    key = t.tag
+    if sanitize:
+        key = key.rsplit('}', 1)[-1]
+    d = {key: {} if t.attrib else None}
+    children = list(t)
+    if children:
+        dd = defaultdict(list)
+        for dc in map(etree2dict, children):
+            for k, v in dc.items():
+                dd[k].append(astype(v))
+        d = {key: {k: astype(v[0]) if len(v) == 1 else astype(v)
+                   for k, v in dd.items()}}
+    if t.attrib:
+        d[key].update((at + k, astype(v)) for k, v in t.attrib.items())
+    if t.text:
+        text = t.text.strip()
+        if children or t.attrib:
+            if text:
+                d[key][tx + 'value'] = astype(text)
+        else:
+            d[key] = astype(text)
+    return d
+    
 
 if READABLE_FORMATS:
     tifff.xml2dict = xml2dict
 
+def metadata_from_ome(fn, sanitize=True, prefix=None):
+    from xml.etree import cElementTree as etree  # delayed import
+
+    tree = etree.parse(fn)
+    root = tree.getroot()
+    return etree2dict(root, sanitize, prefix)
 
 def astype(value):
     if isinstance(value, six.string_types) and (value[0].isdigit() or value[-1].isdigit()):

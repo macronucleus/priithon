@@ -124,7 +124,7 @@ def _switch(fn, read=True, *args, **kwds):
         if os.path.commonprefix(fns):
             return _klass(read, 'seq', fns, *args, **kwds)
         else:
-            raise ValueError('The directory or file names does not seem to contain image series')
+            raise ValueError('The directory or file names %s does not seem to contain image series' % fn)
 
     # writing ome.tiff
     elif fn.endswith('ome.tif') and not read and multitifIO.READABLE_FORMATS:
