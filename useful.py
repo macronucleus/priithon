@@ -2317,7 +2317,7 @@ def load(fn):
             h = imgio.imgSeqIO.Reader(fn)
         except ValueError: # labeling format unknown
             a = N.array([load(os.path.join(fn, f)) for f in sorted(os.listdir(fn))])
-            return a
+            return N.squeeze(a)
         a = N.squeeze(h.asarray())
         try:
             h.close()
@@ -2486,7 +2486,26 @@ def saveImg(arr, fn, rescaleTo8bit=True, rgbOrder='rgba'):
 def saveImg8(arr, fn, forceMultipage=False, rgbOrder="rgba"):
     return saveImg(arr, fn, rescaleTo8bit=True, rgbOrder=rgbOrder)
 
+def saveImg8_seq(arr, fn, rgbOrder="rgba"):
+    """
+    Saves 3D data array as 8-bit gray image file sequence (format from  extension !! .tif,.jpg,...)
+    filename must contain a "template" like %02d - use '%%' otherwise inplace of single '%'
+    template gets replaced with 00,01,02,03,...
 
+    arr gets rescaled to 0..255 to match min..max of entire stack
+
+    for multi-color images:
+         rgbOrder: order in which axes are mapped to RGB(A) channels
+      
+    !!be careful about up-down orientation !!
+    """
+    arr = N.asarray(arr)
+    if arr.ndim != 3:
+        raise ValueError("can only save 3d arrays")
+
+    for i in range(arr.shape[0]):
+        fn1 = fn % i
+        saveImg(arr[i], fn1, rescaleTo8bit=True, rgbOrder=rgbOrder)
 
 def uninit_javabridge():
     """
