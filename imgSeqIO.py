@@ -19,7 +19,12 @@ class Reader(generalIO.Reader):
         RGB images are not accepted.
         """
         if isinstance(fns, six.string_types) and os.path.isdir(fns):
-            fns = [os.path.join(fns, fn) for fn in os.listdir(fns) if not fn.startswith('.')]
+            dd = fns
+            fns = [fn for fn in os.listdir(fns) if not fn.startswith('.')]
+            # sort any format like 't%i_z%i_w%i'
+            fns = sorted(fns, key=lambda f: tuple(int(n) for n in re.findall(r'\d+', f)))
+            fns = [os.path.join(dd, fn) for fn in fns]
+            
         elif type(fns) not in [list, set, tuple]:
             raise ValueError('fns must be a directry, or list, set or tuple of filenames')
 
@@ -31,7 +36,7 @@ class Reader(generalIO.Reader):
         
     def openFile(self):
         #self.fns = self.filename
-        self.fns.sort()
+        #self.fns.sort()
         self.file = os.path.commonprefix([os.path.basename(fn) for fn in self.fns])
         self.filename = os.path.dirname(self.fns[0])#commonprefix(self.fns)
 
@@ -98,14 +103,17 @@ class Reader(generalIO.Reader):
         elif len(name) == 0: # micromanager format
             bases = [os.path.splitext(fn)[0] for fn in fns]
             twzs = [fn.split('_')[1:] for fn in bases]
-            if len(twzs[0]) != 3:
-               raise ValueError('The labeling format of the series not understood') 
-            nt = max([int(twz[0]) for twz in twzs]) + 1
-            nw = len(set([twz[1] for twz in twzs]))
-            nz = max([int(twz[2]) for twz in twzs]) + 1
-            nztw = [nz, nt, nw]
+            if len(twzs[0]) == 3:
+                nt = max([int(twz[0]) for twz in twzs]) + 1
+                nw = len(set([twz[1] for twz in twzs]))
+                nz = max([int(twz[2]) for twz in twzs]) + 1
+                nztw = [nz, nt, nw]
+                imgseq = 2
+            else:
+                nztw = [len(fns), 1, 1]
+                imgseq = 2
+                #raise ValueError('The labeling format of the series not understood') 
 
-            imgseq = 2
 
         # reorder the fn list
         name2 = []
@@ -119,6 +127,7 @@ class Reader(generalIO.Reader):
             dname = 'tzw'
         name = ['[%s%s]' % (s.lower(),s.upper()) for s in dname if s in name]
 
+        skip="""
         num = []
         for fn in self.fns:
             ndims = []
@@ -128,7 +137,7 @@ class Reader(generalIO.Reader):
                 ndims.append(nd)
             num.append((ndims, fn))
         num.sort()
-        self.fns = [fn for ndims, fn in num]
+        self.fns = [fn for ndims, fn in num]"""
 
         
         return nztw, imgseq

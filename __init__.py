@@ -119,9 +119,11 @@ def _switch(fn, read=True, *args, **kwds):
 
     # seq
     if (not isinstance(fn, six.string_types) and hasattr(fn, '__iter__')) or (read and not os.path.isfile(fn)):
+        print('assuming seq')
 
         fns = [ff for ff in fn if os.path.splitext(ff)[1].replace(os.path.extsep, '') in _formats(read, 'seq')]
         if os.path.commonprefix(fns):
+            print('calling seq')
             return _klass(read, 'seq', fns, *args, **kwds)
         else:
             raise ValueError('The directory or file names %s does not seem to contain image series' % fn)
@@ -266,9 +268,9 @@ def load(fn):
     """
     return numpy array
     """
-    if fn.endswith('.npy'):
-        return N.load(fn)
-    elif fn.endswith('.tif') and multitifIO.READABLE_FORMATS:
+    #if fn.endswith('.npy'):
+    #    return N.load(fn)
+    if fn.endswith('.tif') and multitifIO.READABLE_FORMATS:
         try:
             h = Reader(fn)
             a = h.readSec(0)

@@ -1,12 +1,19 @@
-import sys
+import sys, os
 import numpy as N
+READABLE_FORMATS = ('npy',)
+WRITABLE_FORMATS = ('npy',)
+try:
+    from . import arrayIO
+except ImportError:
+    import arrayIO
+
 backend = None
 try:
     #raise ImportError
     from PIL import Image
     backend = 'PIL'
-    WRITABLE_FORMATS = ('bmp', 'eps', 'gif', 'icns', 'ico', 'im', 'jpg', 'jpeg', 'jpeg2000', 'msp', 'pcx', 'png', 'ppm', 'sgi', 'spider', 'tif', 'webp', 'xbm')
-    READABLE_FORMATS = WRITABLE_FORMATS + ('cur', 'dcx', 'dds', 'fli', 'flc', 'fpx', 'ftex', 'gbr', 'gd', 'imt', 'iptc', 'naa', 'mcidas', 'mic', 'mpo', 'pcd', 'pixar', 'psd', 'tga', 'wal', 'xpm')
+    WRITABLE_FORMATS += ('bmp', 'eps', 'gif', 'icns', 'ico', 'im', 'jpg', 'jpeg', 'jpeg2000', 'msp', 'pcx', 'png', 'ppm', 'sgi', 'spider', 'tif', 'webp', 'xbm')
+    READABLE_FORMATS += WRITABLE_FORMATS + ('cur', 'dcx', 'dds', 'fli', 'flc', 'fpx', 'ftex', 'gbr', 'gd', 'imt', 'iptc', 'naa', 'mcidas', 'mic', 'mpo', 'pcd', 'pixar', 'psd', 'tga', 'wal', 'xpm')
     WRITABLE_FORMATS += ('palm', 'pdf', 'xv')
 except ImportError:
     try:
@@ -15,18 +22,30 @@ except ImportError:
         wcs = wx.Image.GetImageExtWildcard()
         wcs = wcs.split('|')[0][1:-1]
         wcs = wcs.split(';')
-        READABLE_FORMATS = WRITABLE_FORMATS = tuple([s.replace('*.', '') for s in wcs])
+        WRITABLE_FORMATS += tuple([s.replace('*.', '') for s in wcs])
+        READABLE_FORMATS += tuple([s.replace('*.', '') for s in wcs])
         # 16-bit tif cannot be read by wxpython
         try:
             from . import multitifIO
         except ImportError:
             import multitifIO
     except ImportError:
-        READABLE_FORMATS = WRITABLE_FORMATS = ()
+        pass
+    #    READABLE_FORMATS = WRITABLE_FORMATS = ()
 
 ###---------- sequence of images -----------###
 def getHandle(fn):
-    if backend == 'PIL':
+    if fn.endswith('.npy'):
+        a = N.load(fn)
+        nw = 1
+        if a.ndim == 3:
+            colaxis = N.argmin(a.shape)
+            nw = a.shape[colaxis]
+            if colaxis == 2:
+                a = a.transpose((2,0,1))
+        fp = arrayIO.Reader(a)
+        fp.setDim(nw=nw)
+    elif backend == 'PIL':
         fp = Image.open(fn)
     elif backend == 'wx' and not fn.endswith(('tiff', 'tif')):
         fp = wx.Image(fn)
@@ -39,7 +58,9 @@ def load(fn):
     return array from common image formats
     """
     fp = getHandle(fn)
-    if backend == 'PIL':
+    if fn.endswith('.npy'):
+        a = fp.arr_with_header()
+    elif backend == 'PIL':
         t,cols,ny,nx,isSwapped = _getImgMode(fp)
         fp.seek(0)
 
@@ -61,8 +82,9 @@ def load(fn):
         
     elif backend == 'wx' and fn.endswith(('tiff', 'tif')):
         a = N.squeeze(fp.asarray())
-        
-    a = a[...,::-1,:]
+
+    if not fn.endswith('.npy'):
+        a = a[...,::-1,:]
     return a
 
 
@@ -189,7 +211,9 @@ def _getImgMode(im):
     """
     This function is from Priithon.Useful.py
     """
-    if backend == 'PIL':
+    if im.__class__.__name__ == 'Reader':
+        return im.dtype, im.nw, im.ny, im.nx, False
+    elif backend == 'PIL':
         cols = 1
         BigEndian = False
         if im.mode   == "1":
