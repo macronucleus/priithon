@@ -34,7 +34,10 @@ IMAGEJ_RESUNIT = {2: 'inch', 3: 'cm', 4: 'mm', 5: u'\xb5'+'m'}
 
 def _convertUnit(val, fromwhat='mm', towhat=u'\xb5'+'m'):
     factors = PXUNIT_FACTORS
-    factor = factors[fromwhat] - factors[towhat] or 0
+    try:
+        factor = factors[fromwhat] - factors[towhat] or 0
+    except KeyError:
+        factor = 0
     if fromwhat == 'inch':
         coeff = 25.4
     else:
