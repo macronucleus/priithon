@@ -17,6 +17,13 @@ except ImportError:
     FFTW = False
     ncpu = 1
 
+## ----- scipy (fallback for next_fast_len; numpy.fft has no such helper) -----
+try:
+    import scipy.fft as _scipy_fft
+    SCIPY = True
+except ImportError:
+    SCIPY = False
+
 ## ------ gpu fft ------
 ## in python2, multithreading application is not supported yet..
 CUDA = False
@@ -185,14 +192,19 @@ class FFTManager(object):
         return a
 
     ### -----fftw -----
-    def _fftw(self, a, func, axes=None, nthreads=ncpu):
+    def _fftw(self, a, func, axes=None, nthreads=ncpu, s=None):
         if 0 in a.shape:
             raise ValueError('This array cannot be transformed, shape: %s' % str(a.shape))
 
         if axes is None:
             axes = [i - a.ndim for i in range(a.ndim)]
         af = pyfftw.empty_aligned(a.shape, dtype=a.dtype.type.__name__)
-        plan = func(af, axes=axes, threads=nthreads)
+        # `s` (real-space output shape along `axes`) is passed to irfftn so the
+        # last-axis parity is preserved on rfft->irfft (see irfft, `shape`).
+        if s is None:
+            plan = func(af, axes=axes, threads=nthreads)
+        else:
+            plan = func(af, s=tuple(s), axes=axes, threads=nthreads)
         af[:] = a[:]
         return plan()
 
@@ -248,9 +260,12 @@ class FFTManager(object):
 
         return af
         
-    def irfft(self, a, axes=None, nthreads=0):
+    def irfft(self, a, axes=None, nthreads=0, shape=None):
+        # `shape`: real-space output shape (along `axes`).  Pass it to recover
+        # an odd last axis; when None the backend assumes an even last axis
+        # (== 2*(M-1)), same convention as numpy.fft.irfftn.
         a = self.check_array(a, CTYPES, CTYPE)
-        
+
         if SCIK and is_memory_enough(a):
             shape = [s for s in a.shape]
             shape[-1] = (shape[-1]-1)*2
@@ -258,14 +273,14 @@ class FFTManager(object):
             func = fft.ifft
             af = self._fft_scik(a, func, shape, dtype)
 
-            
+
         elif FFTW:
             func = pyfftw.builders.irfftn
-                
-            af = self._fftw(a, func, axes=axes, nthreads=nthreads)
+
+            af = self._fftw(a, func, axes=axes, nthreads=nthreads, s=shape)
 
         else:
-            af = N.fft.irfftn(a, axes=axes)
+            af = N.fft.irfftn(a, s=shape, axes=axes)
 
         return af
 
@@ -298,11 +313,56 @@ man = FFTManager()
 def rfft(a, axes=None, nthreads=ncpu):
     return man.rfft(a, axes, nthreads)
 
-def irfft(a, axes=None, nthreads=ncpu):
-    return man.irfft(a, axes, nthreads)
+def irfft(a, axes=None, nthreads=ncpu, shape=None):
+    return man.irfft(a, axes, nthreads, shape=shape)
 
 def fft(a, axes=None, nthreads=ncpu):
     return man.fft(a, axes, nthreads)
 
 def ifft(a, axes=None, nthreads=ncpu):
     return man.ifft(a, axes, nthreads)
+
+
+def _next_fast_len_5smooth(target):
+    """Pure-python fallback: smallest 5-smooth number (2**a * 3**b * 5**c) that
+    is >= target.  Such sizes are efficient for numpy.fft (and safe for any
+    backend)."""
+    target = int(target)
+    if target <= 6:
+        return max(1, target)
+    best = 2 * target                 # generous upper bound
+    p5 = 1
+    while p5 < best:
+        p35 = p5
+        while p35 < best:
+            n = p35
+            while n < target:         # multiply by 2 until >= target
+                n *= 2
+            if n < best:
+                best = n
+            if n == target:
+                return n
+            p35 *= 3
+        p5 *= 5
+    return best
+
+
+def next_fast_len(target, real=False):
+    """Smallest composite length >= target that is efficient for the active FFT
+    backend, chosen the same way as rfft/irfft/fft/ifft above:
+
+      * pyfftw available  -> pyfftw.next_fast_len  (radices 2,3,5,7,11,13)
+      * else scipy        -> scipy.fft.next_fast_len(target, real=real)
+                             (pocketfft; real=True restricts to 5-smooth)
+      * else numpy only   -> pure-python 5-smooth fallback
+
+    `real` is honoured by the scipy backend; pyfftw's own sizes are already
+    good for real transforms, and the fallback is 5-smooth regardless.
+    """
+    target = int(target)
+    if FFTW:
+        return int(pyfftw.next_fast_len(target))
+    elif SCIPY:
+        return int(_scipy_fft.next_fast_len(target, real=real))
+    else:
+        return _next_fast_len_5smooth(target)

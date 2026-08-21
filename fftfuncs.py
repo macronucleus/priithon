@@ -836,7 +836,7 @@ def shift(arr, delta=None): #20081113 , dtype='float32'):
         raise ValueError("shape and delta not same dimension")
 
     return irfft(fourierRealShiftArr(shape, delta) *
-                                    rfft(arr))
+                                    rfft(arr), shape=shape)
 #     else:
 #         ax = range(-len(shape),0)
 #         return fft.irfftn(fourierRealShiftArr(shape, delta) *
@@ -1012,19 +1012,20 @@ def rfft(a, axes=None, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
       otherwise it gets converted to
       minFdtype
 
-    the number of pixels in the last dimension of `a` should be even,
-    otherwise it is clipped off
+    the last dimension of `a` may be odd or even; its length is preserved.
+    to invert exactly, pass the original shape to irfft:
+        irfft(rfft(a), shape=a.shape)
+    (see the note in irfft; this is the numpy.fft.irfftn convention.)
     """
-    # 20220817 added to eliminate artifacts due to odd X pixels
-    if a.shape[-1] % 2:
-        a = a[...,:-1]
-    
+    # NOTE (method 1): the odd last axis is NO LONGER clipped to even here.
+    # rfft->irfft round-trips exactly only when the real-space shape is handed
+    # back to irfft via its `shape=` argument.
     if a.dtype.type not in fftw.RTYPES:
         a = N.asarray(a.real, minFdtype)
 
     return fftw.rfft(a, axes=axes, nthreads=nthreads)
 
-def irfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
+def irfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu, shape=None):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
     """
     calculate nd inverse fourier transform
     performs real- ifft, i.e. the input array has shape with last dim halfed+1
@@ -1038,11 +1039,45 @@ def irfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normalize=Tr
     `af` should be a complex array,
       otherwise it gets converted to
       minCdtype
+
+    `shape` : real-space output shape (the shape of the original array before
+      rfft).  MUST be given to recover an odd last axis -- from the half-complex
+      spectrum alone the last axis could be either 2*(M-1) or 2*(M-1)+1, and when
+      `shape` is None the even value is assumed (numpy.fft.irfftn convention).
+      Typical use:  irfft(rfft(a) * otf, shape=a.shape)
     """
     if af.dtype.type not in fftw.CTYPES:
         af = N.asarray(af, minCdtype)
 
-    return fftw.irfft(af, axes=axes, nthreads=nthreads)
+    return fftw.irfft(af, axes=axes, nthreads=nthreads, shape=shape)
+
+def next_fast_len(target, real=True, even=None):
+    """
+    smallest padded length >= target that is fast for the active FFT backend
+
+    the backend (pyfftw / scipy / numpy-fallback) is selected in fftmanager,
+    the same way as rfft/irfft/fft/ifft.
+
+    `real`  : optimise for a real transform (rfft). honoured by the scipy
+              backend; pyfftw and the pure-python fallback ignore it.
+    `even`  : force the result to be even. defaults to `real`, because rfft()
+              in this module clips an odd last dimension down by one
+              (see rfft, `if a.shape[-1] % 2`); an odd fast length would then
+              be silently reduced to a possibly-slow size. pass even=False for
+              a purely complex transform where oddness is fine.
+
+    Examples
+    --------
+    >>> shape = tuple(next_fast_len(s) for s in arr.shape)   # pad every axis
+    >>> nx = next_fast_len(a.shape[-1], real=True)           # rfft (X) axis
+    """
+    if even is None:
+        even = real
+    n = fftw.next_fast_len(int(target), real=real)
+    if even:
+        while n % 2:
+            n = fftw.next_fast_len(n + 1, real=real)
+    return n
 
 def rsfft(a, axes=None, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
     """
@@ -1059,11 +1094,14 @@ def rsfft(a, axes=None, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
 
     return fftw.rfft(N.fft.ifftshift(a), axes=axes, nthreads=nthreads)
 
-def irsfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
+def irsfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu, shape=None):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
     """
     calculate nd inverse fourier transform
     performs real- ifft, i.e. the input array has shape with last dim halfed+1
     does ifftshift after irfft
+
+    `shape` : real-space output shape; pass it to recover an odd last axis
+      (see irfft).
 
     fftw does NOT normalize (divide by product of shape)
     they argue that the normalization can often be combined with other
@@ -1078,7 +1116,7 @@ def irsfft(af, axes=None, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normalize=T
     if af.dtype.type not in fftw.CTYPES:
         af = N.asarray(af, minCdtype)
 
-    return N.fft.fftshift(fftw.irfft(af, axes=axes, nthreads=nthreads))
+    return N.fft.fftshift(fftw.irfft(af, axes=axes, nthreads=nthreads, shape=shape))
 
 def rfft2d(a, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
     """
@@ -1095,8 +1133,8 @@ def rfft2d(a, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
         aDtype = a.dtype.type # ensures native byte-order ?
 
     nx = a.shape[-1]
-    if nx % 2:
-        raise ValueError("a must be even sized in last dimension")
+    # nx//2+1 is the rfft last-axis length for both even and odd nx, so odd is
+    # allowed now; invert with irfft2d(..., shape=a.shape) to restore odd nx.
     s2 = a.shape[:-1]+(nx//2+1,)
 
     
@@ -1110,7 +1148,7 @@ def rfft2d(a, minFdtype=fftw.RTYPE, nthreads=fftw.ncpu):
         af[tup] = fftw.rfft(N.asarray(a[tup], aDtype), nthreads=nthreads)
     return af
 
-def irfft2d(af, preserve=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
+def irfft2d(af, preserve=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu, shape=None):#normalize=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):
     """
     calculate (section-wise) 2d inverse fourier transform
     performs real- ifft, i.e. the input array has shape with last dim halfed+1
@@ -1126,27 +1164,35 @@ def irfft2d(af, preserve=True, minCdtype=fftw.CTYPE, nthreads=fftw.ncpu):#normal
     `af` should be a complex array,
       otherwise it gets converted to
       minCdtype
+
+    `shape` : real-space output shape; pass it (e.g. the original array's shape)
+      to recover an odd last axis.  When None, an even last axis is assumed
+      (== 2*(M-1)), the previous behaviour.
     """
     if af.dtype.type not in fftw.CTYPES:
         afDtype = minCdtype
     else:
         afDtype = af.dtype.type # ensures native byte-order ?
-    
-    shape = af.shape[:-1] + ((af.shape[-1]-1)*2,)
+
+    if shape is None:
+        outshape = af.shape[:-1] + ((af.shape[-1]-1)*2,)
+    else:
+        outshape = tuple(shape)
+    slice_shape = outshape[-2:]   # real 2d shape of each section, for irfft
 
     if   afDtype == N.complex64:
-        a = N.empty(shape=shape, dtype='float32')
+        a = N.empty(shape=outshape, dtype='float32')
     elif afDtype == N.complex128:
-        a = N.empty(shape=shape, dtype=N.float64)
+        a = N.empty(shape=outshape, dtype=N.float64)
     else:
-        raise TypeError("af must be of dtype complex64 or complex128 (%s given)"%af.dtype) 
+        raise TypeError("af must be of dtype complex64 or complex128 (%s given)"%af.dtype)
 
     for tup in N.ndindex(af.shape[:-2]):
         if preserve :
             myAF = N.array(af[tup], afDtype, copy=1)
         else:
             myAF = N.asarray(af[tup], afDtype)
-        a[tup] = fftw.irfft(myAF, nthreads=nthreads)#), normalize=normalize, nthreads=nthreads)
+        a[tup] = fftw.irfft(myAF, nthreads=nthreads, shape=slice_shape)#), normalize=normalize, nthreads=nthreads)
     return a
 
 '''
@@ -1379,7 +1425,7 @@ def convolve(a,b, conj=0, killDC=0, minFdtype='float32'):
 
     cf = af * bf
 
-    c = irfft(cf)
+    c = irfft(cf, shape=a.shape)   # method 1: preserve odd/even last axis
 
     return c
 
@@ -1507,7 +1553,7 @@ def lowPassGaussFilter(a, sigma=5):
     #af[:sy2] *= g[sy2:]
     #af[sy2:] *= g[:sy2]
 
-    return irfft(af)
+    return irfft(af, shape=a.shape)
 
 
 def mexF2d(a, sigma2d):
