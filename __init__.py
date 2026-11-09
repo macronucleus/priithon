@@ -423,6 +423,7 @@ def merge(fns, out=None, along='t'):
        
 
         d2 = 0
+        prev_shape = None
         for h in rdrs:#fn in fns:
             #with Reader(fn) as h:
             #h = rdrs
@@ -430,6 +431,11 @@ def merge(fns, out=None, along='t'):
             for t in range(h.nt):
                 for w in range(h.nw):
                     a = h.get3DArr(t=t, w=w)
+                    if prev_shape is not None:
+                        if a.shape != prev_shape:
+                            raise ValueError('shape is inconsistent across the merged files %s and %s' % (prev_shape, a.shape))
+                    #print(os.path.basename(h.fn), w, a.shape, a.dtype, o.dtype, w+d2)
+                    a = a.astype(o.dtype)
                     if along == 't':
                         o.write3DArr(a, t=d2+t, w=w)
                     elif along == 'w':
@@ -437,6 +443,7 @@ def merge(fns, out=None, along='t'):
                     elif along == 'z':
                         for z in range(h.nz):
                             o.write3DArr(a, t=t, w=w, z=z+d2)
+                    prev_shape = a.shape
             if along == 't':
                 d2 += h.nt
             elif along == 'w':
@@ -465,11 +472,12 @@ def formatTWZYX(twzyxs, h, start=True):
             ret.append((dim, v))
     return ret
 
-def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,None), channel_ids=[], ifExists='overwrite'):
+def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,None), channel_ids=[], **hdrkwds):
     """
     twzyx0: starting index (minus values accepcted)
     twzyx1: ending index (minus values accepcted)
     channel_ids: if list of channel ids are supplied, it overwrite the twzyx0, twzyx1
+    hdrkwds: to edit header
 
     return output filename
     """
@@ -491,11 +499,13 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
             if channel_ids and len(channel_ids) != h.nw:
                 wws = ''.join([str(c) for c in channel_ids])
                 whats += ('_w' + wws)
+            if hdrkwds:
+                whats += ('edithdr')
             base, ext = os.path.splitext(fn)
             if ext not in WRITABLE_FORMATS:
                 ext = '.dv'
             out = base + whats + ext
-            if os.path.isfile(out) and ifExists != 'overwrite':
+            if os.path.isfile(out):
                 raise ValueError('The output file name %s exists, please specify another output file name.' % os.path.basename(out))
             
         twzyx0s = formatTWZYX(twzyx0s, h, start=True)
@@ -527,11 +537,20 @@ def copyRegion(fn, out=None, twzyx0=(0,0,0,0,0), twzyx1=(None,None,None,None,Non
             hdr.Num[1] = ys.stop - ys.start
             hdr.Num[0] = xs.stop - xs.start
             waves = hdr.wave[ws]
-            print(ws, waves, hdr.wave)
+            #print(ws, waves, hdr.wave)
             hdr.wave[:len(waves)] = waves
+            for key, val in hdrkwds.items():
+                itm = hdr.__getattr__(key)
+                if len(itm) == 1:
+                    hdr.__setattr__(key, item)
+                elif hasattr(val, '__iter__'):
+                    itm[:len(val)] = val
+                else:
+                    itm[0] = val
             o = Writer(out, hdr=hdr)
         else:
             o = Writer(out, h)
+            o.metadata.update(hdrkwds)
             o.setDim(nx=xs.stop - xs.start, ny=ys.stop - ys.start, nz=len(zs), nt=len(ts), nw=len(ws), wave=N.take(h.wave,list(ws)))
             print(ws)
         

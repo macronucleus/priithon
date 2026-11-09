@@ -381,7 +381,7 @@ class Writer(generalIO.Writer):
                 for w in range(h.nw):
                     for z in range(h.nz):
                         i = h.findFileIdx(t=t, w=w, z=z)
-                        if h.fp.extInts.shape[0] <= i:
+                        if not hasattr(h.fp, 'extInts') or h.fp.extInts.shape[0] <= i:
                             continue
                         ei = h.fp.extInts[i]
                         ef = h.fp.extFloats[i]
@@ -405,11 +405,12 @@ class Writer(generalIO.Writer):
             elif along == 'z':
                 d2 += h.nz
 
-        self.fp.hdr.NumIntegers = self.fp.extInts.shape[-1]
-        self.fp.hdr.NumFloats = self.fp.extFloats.shape[-1]
-        self.fp.writeHeader()
+        if hasattr(self.fp, 'extInts'):
+            self.fp.hdr.NumIntegers = self.fp.extInts.shape[-1]
+            self.fp.hdr.NumFloats = self.fp.extFloats.shape[-1]
+            self.fp.writeHeader()
 
-        self.fp.writeExtHeader(True)
+            self.fp.writeExtHeader(True)
 
 
 # functions

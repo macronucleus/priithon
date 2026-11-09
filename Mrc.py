@@ -1170,7 +1170,7 @@ mrcHdrFields = [
     ('i2', (5,), 'wave', 'Wavelength 1, in nm.'),
     ('f4', (3,), 'zxy0', 'X origin, in um.'),   # 20050920  ## fixed: order is z,x,y NOT x,y,z
     ('i4', (1,), 'NumTitles', 'Number of titles. Valid numbers are between 0 and 10. '),
-    ('a80', (10,), 'title', 'Title 1. 80 characters long. '),
+    ('S80', (10,), 'title', 'Title 1. 80 characters long. '),
 ]
 
 mrcHdrFormats = []
