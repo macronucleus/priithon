@@ -18,6 +18,11 @@ The following modules were copied from the PriCommon and common repositories
 - common: `commonfuncs`, `fntools`, `guiFuncs`, `listbox`, `microscopy`,
   `logger`, `ppro`, `ppro26`, `pprocess`
 
+Added later for Optics (also without history):
+
+- PriCommon: `region`
+- common: `str2dic`
+
 ## Viewing the history of a file
 
 Because the merged repositories kept their original paths in their own
