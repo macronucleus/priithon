@@ -1,9 +1,6 @@
 
 import numpy as N
-try:
-    from . import generalIO
-except ImportError:
-    import generalIO
+from . import generalIO
 
 READABLE_FORMATS = WRITABLE_FORMATS = []
 # 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT (idx = [2,1,0])

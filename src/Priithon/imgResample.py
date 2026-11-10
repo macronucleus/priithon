@@ -1,9 +1,5 @@
-try:
-    from Priithon.all import U, N
-    from common import ppro26 as ppro
-except (ValueError, ImportError):
-    from ..Priithon.all import U, N
-    from ..common import ppro26 as ppro
+from .all import U, N
+from . import ppro26 as ppro
 
 NCPU = ppro.NCPU
 

@@ -3,10 +3,7 @@
 #from Data import data as D
 import os
 #exec('import %s as O' % os.path.basename(D.WORKDIR))
-try:
-    from ..Priithon.all import N, U, F
-except (ValueError, ImportError):
-    from Priithon.all import N, U, F
+from .all import N, U, F
 from . import imgFilters, imgFit, imgGeo, imgResample
 
 # cross-correlation
@@ -149,7 +146,7 @@ def mexhatFilter(a, mexSize=1):#, trimRatio=0.9):
     global mexhatC, mexhatC_size, mexhatCf
 
     a = imgFilters.evenShapeArr(a)
-    from Priithon.all import F as fftw
+    from .all import F as fftw
     try:
         if mexhatC.shape != a.shape:
             raise ValueError('go to except')

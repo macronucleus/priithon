@@ -1,9 +1,6 @@
 from __future__ import division
 
-try:
-    from . import generalIO
-except ImportError:
-    import generalIO
+from . import generalIO
 
 
 import numpy as N

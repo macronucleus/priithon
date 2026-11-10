@@ -2,7 +2,7 @@ import logging, sys
 import six
 if hasattr(sys,'app'):
     try:
-        from Priithon.all import Y
+        from .all import Y
     except ImportError:
         pass # not priithon
 

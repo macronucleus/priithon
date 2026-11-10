@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Priithon"
+dynamic = ["version"]
+description = "A Python platform for image analysis and image analysis algorithm development"
+readme = "README.md"
+authors = [{ name = "Atsushi Matsuda" }]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "scipy",
+    "six",
+]
+
+[project.optional-dependencies]
+# GUI (viewer, shell, ndviewer)
+gui = ["wxpython", "pyopengl", "wxmplot"]
+# file formats read/written by Priithon.imgio
+io = ["tifffile", "pillow", "nd2", "czifile", "oiffile", "readlif", "chardet"]
+full = ["Priithon[gui,io]"]
+
+[project.gui-scripts]
+Priithon = "Priithon.PriShell:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "Priithon.version.version" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+Priithon = ["*.npy"]

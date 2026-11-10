@@ -2,11 +2,8 @@
 import os, re
 import six
 import numpy as N
-try:
-    from . import generalIO, imgIO
-except ImportError:
-    import generalIO, imgIO
-from common import fntools
+from . import generalIO, imgIO
+from .. import fntools
 
 WRITABLE_FORMATS = imgIO.WRITABLE_FORMATS
 READABLE_FORMATS = imgIO.READABLE_FORMATS
@@ -280,7 +277,7 @@ class Writer(generalIO.Writer):
         self._setSuffix()
 
     def setDimFromMrcHdr(self, hdr):
-        from Priithon.all import Mrc
+        from ..all import Mrc
         self.wave = hdr.wave
         self.nw = hdr.NumWaves
         self.nt = hdr.NumTimes

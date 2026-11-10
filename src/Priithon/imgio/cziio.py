@@ -1,9 +1,6 @@
 import numpy as N
 
-try:
-    from . import generalIO
-except ImportError:
-    import generalIO
+from . import generalIO
 
 try:
     import czifile

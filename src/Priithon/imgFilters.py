@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-try:
-    from Priithon.all import N, U, Y, F
-except (ValueError, ImportError):
-    from ..Priithon.all import N, U, Y, F
+from .all import N, U, Y, F
 from scipy import optimize
-try:
-    from . import imgFit
-except ImportError: # python2
-    import imgFit
+from . import imgFit
 import os
 #try:
 #    from packages import Eext
@@ -1148,7 +1142,7 @@ def vgLabelIn3D(v_id=-1, zyx = (None,200,200), kind='Cross',
 
     zPlusMinus - how many sections above/below z should be marked (at most)
     """
-    from Priithon.all import Y
+    from .all import Y
 
     if type(v_id)  is int or hasattr(v_id, 'zshape'):
         if type(v_id)  is int:

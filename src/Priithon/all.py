@@ -45,7 +45,7 @@ from . import useful as U
 from . import fftfuncs as F
 try:
     #from . import Mrc
-    from imgio import Mrc
+    from .imgio import Mrc
 except:
     _broken +=" Mrc"
 

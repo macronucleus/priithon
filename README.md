@@ -13,7 +13,7 @@ Dependencies
 * `wxmplot` (optional for plotting on Apple silicon) # under development
 * `pyFFTW` (optional for fast Fourier transform) 
   GPL License (see License.md, even if  you don't install it, you can still use Fourier transform using numpy)
-* `imgio` (optional for reading file formats other than the dv/mrc format)
+* `tifffile`, `pillow`, `nd2`, `czifile`, `oiffile`, `readlif` (optional for reading file formats other than the dv/mrc format with `Priithon.imgio`)
 
 To install, use conda environments in `envs` directory (contains pyFFTW).  
 To create a new environment:  
@@ -29,10 +29,10 @@ pyopengl wxmplot pillow
 
 After activating the environment by typing  
 `$ conda activate [env_name]`  
-Install imgio:  
-`$ pip install git+http://github.com/macronucleus/imgio@main`  
-Then install Priithon:  
+Install Priithon (`imgio` and `ndviewer` are included as `Priithon.imgio` and `Priithon.ndviewer`):  
 `$ pip install git+http://github.com/macronucleus/priithon@master`  
+For development, clone this repository and install it in editable mode:  
+`$ pip install -e .`  
 
 After installation, type on the command line:  
 `$ priithon`  

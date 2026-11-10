@@ -6,18 +6,11 @@ import six
 import wx, wx.lib.scrolledpanel as scrolled
 import wx.lib.agw.aui as aui # from wxpython4.0, wx.aui does not work well, use this instead
 
-try:
-    from ..common import guiFuncs as G ,microscopy
-    from .. import imgio
-    from ..Priithon import histogram#, useful as U
-    from ..Priithon.all import Y, U, F
-    from ..PriCommon import imgResample
-except (ValueError, ImportError):
-    from common import guiFuncs as G ,microscopy
-    import imgio
-    from Priithon import histogram#, useful as U
-    from Priithon.all import Y, U, F
-    from PriCommon import imgResample
+from .. import guiFuncs as G, microscopy
+from .. import imgio
+from .. import histogram#, useful as U
+from ..all import Y, U, F
+from .. import imgResample
 
 from . import viewer2
 from . import glfunc as GL

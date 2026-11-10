@@ -1,9 +1,6 @@
 from __future__ import division
 import sys
-try:
-    from . import generalIO
-except ImportError:
-    import generalIO
+from . import generalIO
 import six
 
 

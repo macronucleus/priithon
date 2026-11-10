@@ -3,16 +3,13 @@ from __future__ import print_function
 import os
 import six
 import numpy as N
-try:
-    import imgio
-except ImportError:
-    from .. import imgio
+from . import imgio
 
 # GUI
 try:
     import wx
     import time
-    from common import guiFuncs as G
+    from . import guiFuncs as G
     _wx = True
 except ImportError:
     _wx = False
@@ -92,7 +89,7 @@ def flatConv(fn, flatFile, out=None, suffix=SUF):
     f = imgio.Reader(flatFile)
 
     if h.shape != f.shape:
-        from Priithon.all import F
+        from .all import F
     
     o = imgio.Writer(out)
     o.setFromReader(h)
@@ -263,7 +260,7 @@ if _wx:
             """
             view with viewer
             """
-            import ndviewer
+            from . import ndviewer
             import sys
             # prepare viewer
             if not self.aui:
@@ -301,7 +298,7 @@ if __name__ == '__main__':
     options, arguments = p.parse_args()
 
     if not arguments:
-        from ..Priithon import PriApp
+        from Priithon import PriApp
         PriApp._maybeExecMain()
     else:
         make = options.make

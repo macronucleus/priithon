@@ -1,10 +1,7 @@
 """provides the bitmap OpenGL panel for Priithon's ND 2d-section-viewer (multi-color version)"""
 import weakref, sys
 from .viewerCommon import *
-try:
-    from ..PriCommon import imgGeo #PriCommon import imgGeo
-except (ValueError, ImportError): # interactive mode
-    from PriCommon import imgGeo
+from .. import imgGeo
     
 
 dataTypeMaxValue_table = {
@@ -191,10 +188,7 @@ class GLViewer(GLViewerCommon):
         self.pic_ny, self.pic_nx = max(self.pic_nys), max(self.pic_nxs)
 
         if smin == smax == 0:
-            try:
-                from ..Priithon.all import U
-            except (ValueError, ImportError):
-                from Priithon.all import U
+            from ..all import U
             smin, smax = U.mm(img)
 
         tex_nx = 2

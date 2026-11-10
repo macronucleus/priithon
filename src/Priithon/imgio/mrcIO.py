@@ -4,10 +4,7 @@
 #    import Mrc
 import numpy as N
 import six
-try:
-    from . import generalIO, Mrc
-except ImportError:
-    import generalIO, Mrc
+from . import generalIO, Mrc
 
 READABLE_FORMATS = WRITABLE_FORMATS = ('mrc', 'dv')
 # 'Image sequence. 0=ZTW, 1=WZT, 2=ZWT (idx = [2,1,0])

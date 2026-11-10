@@ -587,10 +587,7 @@ class GLViewerCommon(wxgl.GLCanvas):
     ## don't need
     def OnSaveScreenShort(self, event=None):
         '''always flipY'''
-        try:
-            from ..Priithon.all import U, FN
-        except (ValueError, ImportError):
-            from Priithon.all import U, FN
+        from ..all import U, FN
         fn = FN(1)#, verbose=0)
         if not fn:
             return

@@ -2,10 +2,7 @@ import sys, os
 import numpy as N
 READABLE_FORMATS = ('npy',)
 WRITABLE_FORMATS = ('npy',)
-try:
-    from . import arrayIO
-except ImportError:
-    import arrayIO
+from . import arrayIO
 
 backend = None
 try:
@@ -25,10 +22,7 @@ except ImportError:
         WRITABLE_FORMATS += tuple([s.replace('*.', '') for s in wcs])
         READABLE_FORMATS += tuple([s.replace('*.', '') for s in wcs])
         # 16-bit tif cannot be read by wxpython
-        try:
-            from . import multitifIO
-        except ImportError:
-            import multitifIO
+        from . import multitifIO
     except ImportError:
         pass
     #    READABLE_FORMATS = WRITABLE_FORMATS = ()

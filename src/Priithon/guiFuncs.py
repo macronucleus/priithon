@@ -1,10 +1,7 @@
 import os, sys
 import six
 import wx
-try:
-    from ..Priithon import viewerRubberbandMode
-except (ValueError, ImportError): # interactive mode
-    from Priithon import viewerRubberbandMode
+from . import viewerRubberbandMode
 
 SIZER_KWDS={'flag': wx.ALIGN_CENTRE|wx.ALL|wx.GROW, 'border': 0}
 

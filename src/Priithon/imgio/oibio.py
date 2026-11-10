@@ -1,7 +1,4 @@
-try:
-    from . import generalIO
-except ImportError:
-    import generalIO
+from . import generalIO
 
 
 try:

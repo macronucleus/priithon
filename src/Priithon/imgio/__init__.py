@@ -5,13 +5,7 @@ if sys.version_info.major == 3:
 import six
 import numpy as N
 
-if sys.version_info.major == 2:
-    import generalIO, Mrc, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
-elif sys.version_info.major >= 3:
-    try:
-        from . import generalIO, Mrc, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
-    except ImportError:
-        from imgio import generalIO, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
+from . import generalIO, Mrc, mrcIO, imgIO, imgSeqIO, multitifIO, bioformatsIO, arrayIO, nd2io, cziio, oibio, lifio
         
 reload(Mrc)
 

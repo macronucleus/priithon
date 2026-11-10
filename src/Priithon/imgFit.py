@@ -1,15 +1,7 @@
 ### Here all kinds of fitting
 from __future__ import print_function
-try:
-    from Priithon.all import N, U
-except (ValueError, ImportError):
-    from ..Priithon.all import N, U
-try:
-    from . import imgFilters, imgGeo
-except ValueError:
-    from PriCommon import imgFilters, imgGeo
-except ImportError: # python 2
-    import imgFilters, imgGeo
+from .all import N, U
+from . import imgFilters, imgGeo
 #import exceptions
 
 #from packages import logger

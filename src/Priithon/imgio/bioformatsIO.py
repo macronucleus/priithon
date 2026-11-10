@@ -3,19 +3,13 @@
 
 import os, copy, unicodedata, sys
 
-try:
-    from . import generalIO, mrcIO, multitifIO
-except ImportError:
-    import generalIO, mrcIO, multitifIO
+from . import generalIO, mrcIO, multitifIO
 
 COMMON=True
 try:
-    from ..common import fntools, commonfuncs
-except (ValueError, ImportError):
-    try:
-        from common import fntools, commonfuncs
-    except  (ValueError, ImportError):
-        COMMON=False
+    from .. import fntools, commonfuncs
+except ImportError:
+    COMMON=False
     
 import numpy as N
 

@@ -40,8 +40,8 @@ except:
     S = None
 
 try:
-    from imgio import Reader, Writer
-    import imgio
+    from .imgio import Reader, Writer
+    from . import imgio
 except ImportError:
     pass
     
@@ -2309,10 +2309,7 @@ def load(fn):
     #    from . import Mrc
     #    a = Mrc.bindFile(fn)
     elif os.path.isdir(fn):
-        try:
-            import imgio
-        except (ValueError, ImportError):
-            from .. import imgio
+        from . import imgio
         try:
             h = imgio.imgSeqIO.Reader(fn)
         except ValueError: # labeling format unknown
@@ -2334,10 +2331,7 @@ def load(fn):
             #20060824 CHECK  a._originLeftBottom=0
         except (IOError, SystemError, ImportError, OSError): # ImportError for Image"""
         try:
-            try:
-                import imgio
-            except (ValueError, ImportError):
-                from .. import imgio
+            from . import imgio
             old="""
             h = imgio.Reader(fn)
             a = N.squeeze(h.asarray())
@@ -2477,10 +2471,7 @@ def loadImg_seq(fns, channels=None, verbose=0): #### #, i0=0, iDelta=1, squeezeG
 
 
 def saveImg(arr, fn, rescaleTo8bit=True, rgbOrder='rgba'):
-    try:
-        import imgio
-    except (ValueError, ImportError):
-        from .. import imgio
+    from . import imgio
     return imgio.imgIO.save(arr, fn, rescaleTo8bit, rgbOrder)
 
 def saveImg8(arr, fn, forceMultipage=False, rgbOrder="rgba"):
@@ -2511,10 +2502,7 @@ def uninit_javabridge():
     """
     necessary to turn off the java connection after loading with bioformats
     """
-    try:
-        import imgio
-    except (ValueError, ImportError):
-        from .. import imgio
+    from . import imgio
     imgio.uninit_javabridge()
 
 old='''

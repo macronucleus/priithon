@@ -974,7 +974,7 @@ def FNs_am(multiple=True):
     """
     global _DIR, _WILDCARD
     try:
-        from common import guiFuncs as G
+        from . import guiFuncs as G
         import os
     except ImportError:
         raise NotImplementedError('Please install PriCommon')
@@ -995,7 +995,7 @@ def view3(fns):
     opens a memory efficient viewer with orthogonal view
     """
     try:
-        import ndviewer
+        from . import ndviewer
         import os
     except ImportError:
         raise NotImplementedError('Please install ndviewer')

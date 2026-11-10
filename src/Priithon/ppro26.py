@@ -3,7 +3,7 @@ import multiprocessing as mp, sys
 try:
     # check if fourier module is available
     #from Priithon.all import F
-    from Priithon import fftfuncs as F
+    from . import fftfuncs as F
 except ImportError:
     F = None
 
