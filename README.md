@@ -24,7 +24,8 @@ To add to the existing environment:
 Alternatively, you can install the dependencies for your platform manually like:  
 `$ conda create -n [env_name] -c conda-forge numpy scipy wxpython
 pyopengl wxmplot pillow 
-[pyfftw, tifffile, nd2, czifile, oiffile, readlif]`  
+[pyfftw, tifffile==2021.7.2, nd2, czifile, oiffile, readlif]`  
+`windows: [freeglut]`_
 
 After activating the environment by typing  
 `$ conda activate [env_name]`  

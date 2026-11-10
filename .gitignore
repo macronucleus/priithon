@@ -1,10 +1,25 @@
-# use glob syntax.
-syntax: glob
-
-*.elc
-*.pyc
-*.pyo
+# Python
+__pycache__/
+*.py[cod]
+*.py~
 *.so
+build/
+dist/
+*.egg-info/
+
+# Libraries
+*.dll
+*.lib
+
+# Data / temporary
+*.bak
+*.png
+*.tiff
+*.mrc
+*.zip
+.#*
 *~
-.cmdprotocol
+
+# OS
 .DS_Store
+._DS_Store
