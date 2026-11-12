@@ -140,7 +140,7 @@ class GLViewer(wxgl.GLCanvas):
         wx.EVT_MENU(f, Menu_zoomWithMiddle,  self.OnZoomWithMiddle)
         
     def InitGL(self):
-        (self.m_w, self.m_h) = self.GetClientSizeTuple()
+        (self.m_w, self.m_h) = tuple(self.GetClientSize())
         
         self.SetCurrent() # 20041026 - needed ?? 
 
@@ -802,7 +802,7 @@ class GLViewer(wxgl.GLCanvas):
     def zoomToRect(self, x0,y0,x1,y1):
         dx = x1-x0
         dy = y1-y0
-        sx,sy = self.GetClientSizeTuple()
+        sx,sy = tuple(self.GetClientSize())
 
         scaleX = abs(sx / float(dx))
         scaleY = abs(sy / float(dy))
@@ -1063,7 +1063,7 @@ class GLViewer(wxgl.GLCanvas):
         self.m_doViewportChange = True
         
         #self.m_w, self.m_h = self.GetSizeTuple() # self.GetClientSizeTuple()
-        self.m_w, self.m_h = self.GetClientSizeTuple()
+        self.m_w, self.m_h = tuple(self.GetClientSize())
         #print "***1 ", self.GetSizeTuple()
         #print "***2 ", self.GetClientSizeTuple()
         if self.m_w <=0 or self.m_h <=0:

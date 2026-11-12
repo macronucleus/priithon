@@ -236,7 +236,7 @@ class plot_canvas(wx.Window,property_object):
         self.Bind(wx.EVT_MENU, self.on_axis_freeze, id=504)
         #20090603 (called by default) menu.UpdateUI()
         if wx.version().startswith('3'):
-            self.PopupMenuXY(menu) #20090603 (default mouse cursor pos) ,pos[0],pos[1])
+            self.PopupMenu(menu) #20090603 (default mouse cursor pos) ,pos[0],pos[1])
         else:
             self.PopupMenu(menu)
     # workers
@@ -286,7 +286,7 @@ class plot_canvas(wx.Window,property_object):
         if not dc:
             dc = wx.ClientDC(self)
         if wx.version().startswith('3'):
-            self.client_size = self.GetClientSizeTuple()#seb An array doesn't make sense as a truth value: array(self.GetClientSizeTuple())
+            self.client_size = tuple(self.GetClientSize())#seb An array doesn't make sense as a truth value: array(self.GetClientSizeTuple())
         else:
             self.client_size = self.GetClientSize()
         # set the device context for all titles so they can
@@ -433,7 +433,7 @@ class plot_canvas(wx.Window,property_object):
                    
     def reset_size(self, dc = None):
         if wx.version().startswith('3'):
-            new_size = self.GetClientSizeTuple()
+            new_size = tuple(self.GetClientSize())
         else:
             new_size = self.GetClientSize()
         if new_size != self.client_size:
@@ -887,7 +887,7 @@ class plot_frame(wx.Frame):
                    "BMP files (*.tsv)|*.tsv|" \
                    "JPEG files (*.txt)|*.txt|" \
                    "All Files |*"
-        dlg = wx.FileDialog(self, "Save CSV As", ".", "", wildcard, wx.SAVE|wx.FD_OVERWRITE_PROMPT)
+        dlg = wx.FileDialog(self, "Save CSV As", ".", "", wildcard, wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             fn = dlg.GetPath()
             #from priithon.all import U

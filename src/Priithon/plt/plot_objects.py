@@ -230,7 +230,7 @@ class text_window(wx.Window,text_object):
         wx.EVT_MENU(self, 600, self.OnFont)
         #print 'fp:',self.text
         menu.UpdateUI()
-        self.PopupMenuXY(menu,pos[0],pos[1])
+        self.PopupMenu(menu, wx.Point(int(pos[0]), int(pos[1])))
         
     def OnFont(self,event):
         data = wx.FontData()
@@ -248,7 +248,7 @@ class text_window(wx.Window,text_object):
     def OnText(self,event):
         #print 'on text:',self.text
         dlg = wx.TextEntryDialog(self.GetParent(), 'New Text',
-                            defaultValue=self.text)
+                            value=self.text)
         if dlg.ShowModal() == wx.ID_OK:
             self.text = dlg.GetValue()
             self.plot_canvas.update()     
@@ -605,7 +605,7 @@ class axis_window(wx.Window,axis_object):
         menu.Append(600, 'Change Font', 'Change Text Font')
         wx.EVT_MENU(self, 600, self.OnFont)
         menu.UpdateUI()
-        self.PopupMenuXY(menu,pos[0],pos[1])
+        self.PopupMenu(menu, wx.Point(int(pos[0]), int(pos[1])))
         
     def OnFont(self,event):
         data = wx.FontData()
