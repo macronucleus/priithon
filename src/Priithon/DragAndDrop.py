@@ -25,9 +25,9 @@ class ClipTextPanel(wx.Panel):
         sizer.Add(hsz, 0, wx.EXPAND)
         sizer.Add(wx.Button(self, 6052, " Copy Bitmap "), 0, wx.EXPAND|wx.ALL, 2)
 
-        EVT_BUTTON(self, 6050, self.OnCopy)
-        EVT_BUTTON(self, 6051, self.OnPaste)
-        EVT_BUTTON(self, 6052, self.OnCopyBitmap)
+        self.Bind(wx.EVT_BUTTON, self.OnCopy, id=6050)
+        self.Bind(wx.EVT_BUTTON, self.OnPaste, id=6051)
+        self.Bind(wx.EVT_BUTTON, self.OnCopyBitmap, id=6052)
 
         self.SetAutoLayout(True)
         self.SetSizer(sizer)
@@ -125,7 +125,7 @@ class MyFileDropTarget(wx.FileDropTarget):
             originLeftBottom=None
             try:
                 try:
-                    import useful as U
+                    from . import useful as U
                     a = U.loadImg(fn)
                     originLeftBottom=0
                 except IOError:

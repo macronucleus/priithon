@@ -915,16 +915,16 @@ class GLViewer(wxgl.GLCanvas):
                         data = ((img-self.bugXiGraphicsmi) *self.bugXiGraphicsfa)
                         data = N.clip(data, 0, 255)
                         data = data.astype(N.uint8)
-                        imgString = data.tostring()
+                        imgString = data.tobytes()
                         imgType = N.uint8
 
                     else:
                         if img.dtype.type in (N.float64, N.int32, N.uint32):
                             data = img.astype(N.float32)
-                            imgString = data.tostring()
+                            imgString = data.tobytes()
                             imgType = N.float32
                         else:
-                            imgString = img.tostring()
+                            imgString = img.tobytes()
                             imgType = img.dtype.type
                             
                         # maxUShort: value that represents "maximum color" - i.e. white

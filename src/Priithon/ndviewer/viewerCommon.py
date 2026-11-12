@@ -580,7 +580,7 @@ class GLViewerCommon(wxgl.GLCanvas):
 
     ## don't need
     def OnSaveClipboard(self, event=None):
-         import usefulX2 as Y
+         from .. import usefulX as Y
          Y.vCopyToClipboard(self, clip=1)
          Y.shellMessage("### screenshot saved to clipboard'\n")
 
@@ -634,7 +634,7 @@ class GLViewerCommon(wxgl.GLCanvas):
 #         shellMessage("### section saved to '%s'\n"%fn)
 
     def OnRotate(self, evt):
-        import usefulX2 as Y
+        from .. import usefulX as Y
         Y.vRotate(self)
     def OnAspectRatio(self, evt):
         ds = "nx/ny"

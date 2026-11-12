@@ -68,7 +68,7 @@ if FFTW:
         b = N.empty(shape, CTYPES[a.dtype.type])
 
         if normalize:
-            vol = N.product(a.shape[:-1])
+            vol = N.prod(a.shape[:-1])
             vol *= (a.shape[-1]-1)*2
         else:
             vol = 1
@@ -92,7 +92,7 @@ if FFTW:
         b = N.empty_like(a) # assuming complex type
 
         if normalize:
-            vol = N.product(a.shape)
+            vol = N.prod(a.shape)
         else:
             vol = 1
         return _fft(a, b, nthreads=nthreads, direction='backward') / vol

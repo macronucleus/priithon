@@ -97,7 +97,7 @@ def copyPadded(a,b, pad=0):
     ######## print
     dS = N.subtract(b.shape, a.shape)
     # if padding wanted and if NOT all UN-padding
-    if pad is not None and not N.all( dS <= 0):#N.alltrue( dS <= 0 ):
+    if pad is not None and not N.all( dS <= 0):#N.all( dS <= 0 ):
         b[:] = pad #HACK - because not very efficient !?
        
     for i in range(a.ndim):
@@ -216,7 +216,7 @@ def binning(arr, bins):
         else:
             slc.append(slice(None,None))
     #slc = tuple([slice(0, -s) for s in shape - newshape])
-    newshape2 = N.empty((arr.ndim*2,), N.int)
+    newshape2 = N.empty((arr.ndim*2,), int)
     newshape2[::2] = newshape
     newshape2[1::2] = bins
     arr = arr[slc].reshape(newshape2)
@@ -266,7 +266,7 @@ def getHistEqualizedF(arr, histYX=None, nBins=None):
     xRange = float(x[-1]) - xMin
     nBins = len(h)
     scale = (nBins-1)/xRange
-    aHistEq = hcs[ N.array(.5+scale*(arr-xMin), dtype=N.int) ]
+    aHistEq = hcs[ N.array(.5+scale*(arr-xMin), dtype=int) ]
     return aHistEq
 
 ###################################################################
@@ -893,8 +893,8 @@ def fourierShiftArr(shape=defshape, delta=None, meantForRealFFT=False, dtype='fl
                                          x* dx )) , shape, dtype)
     
 '''
-    dim = N.array(shape, dtype=N.float)
-    dr = N.array(delta, dtype=N.float)
+    dim = N.array(shape, dtype=float)
+    dr = N.array(delta, dtype=float)
     dr *= -1. / dim 
     print shape, dr
     if meantForRealFFT:

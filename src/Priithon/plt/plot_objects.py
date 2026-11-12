@@ -957,7 +957,7 @@ class image_object(property_object):
         pixels = take( cmap, scaled_mag)
         del scaled_mag
         # need to transpose pixels in memory...
-        bitmap = pixels.astype(uint8).tostring()
+        bitmap = pixels.astype(uint8).tobytes()
         image = wx.EmptyImage(self.matrix.shape[1],self.matrix.shape[0])
         image.SetData(bitmap)
         return image

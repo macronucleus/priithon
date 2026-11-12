@@ -361,14 +361,14 @@ class FileSelectorDialog(wx.Dialog):
             if sys.version_info.major >= 3:
                 ddDirs = sorted( [f1+'/' for f1 in os.listdir(d) if os.path.isdir(os.path.join(d,f1))] )
             else:
-                ddDirs = sorted( [f1+'/' for f1 in os.listdir(d) if (type(f1) == unicode and os.path.isdir(os.path.join(d,f1)))] )
+                ddDirs = sorted( [f1+'/' for f1 in os.listdir(d) if (isinstance(f1, six.string_types) and os.path.isdir(os.path.join(d,f1)))] )
         except OSError:
             ddDirs = []
 
         if sys.version_info.major >= 3:
              ddFiles = sorted( [f1 for f1 in glob.glob1(d,f) if not os.path.isdir(os.path.join(d,f1))] )
         else:
-            ddFiles = sorted( [f1 for f1 in glob.glob1(d,f) if (type(f1) == unicode and not os.path.isdir(os.path.join(d,f1)))] )
+            ddFiles = sorted( [f1 for f1 in glob.glob1(d,f) if (isinstance(f1, six.string_types) and not os.path.isdir(os.path.join(d,f1)))] )
         if not self.showHiddenFiles:
             ddDirs = [f1 for f1 in ddDirs if not f1.startswith('.')]
             ddFiles = [f1 for f1 in ddFiles if not f1.startswith('.')]

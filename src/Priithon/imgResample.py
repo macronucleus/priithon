@@ -3,7 +3,7 @@ from . import ppro26 as ppro
 
 NCPU = ppro.NCPU
 
-import scipy.ndimage.interpolation as ndii
+import scipy.ndimage as ndii # scipy.ndimage.interpolation namespace is deprecated
 
 METHODS = {'0nearest': 0,
            '1bilinear': 1,
@@ -112,7 +112,7 @@ def trans3D_affine(arr, tzyx=(0,0,0), r=0, mag=1, dzyx=(0,0,0), rzy=0, ncpu=NCPU
 
         arr = canvas
 
-    if dtype in (N.uint8, N.uint16, N.uint32, N.int64): #N.int, N.uint8, N.uint16, N.uint32):
+    if dtype in (N.uint8, N.uint16, N.uint32, N.int64): #int, N.uint8, N.uint16, N.uint32):
         arr = N.where(arr < 0, 0, arr)
         
     return arr.astype(dtype)

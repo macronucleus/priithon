@@ -914,7 +914,7 @@ def saveSession(fn=None, autosave=False):
         # save text file containing only the commands (no return vals or prints)
         if PriConfig.autoSaveSessionCommands:
             #import __main__
-            f = file(fn[:-3]+PriConfig.autoSaveSessionCommands, 'w')
+            f = open(fn[:-3]+PriConfig.autoSaveSessionCommands, 'w')
             #for c in __main__.shell.history[::-1]:
             for c in shell.history[::-1]:
                 print(c, file=f)
@@ -1114,14 +1114,14 @@ def plotFitAny(f, parms, min=None,max=None,step=None,hold=True,s='-'):
     if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    import useful as U
-    import __builtin__
+    from . import useful as U
+    import builtins
     if min is None or max is None:
         dpx = plotDatapoints(0)[0]
         if min is None:
-            min = __builtin__.min(dpx)
+            min = builtins.min(dpx)
         if max is None:
-            max = __builtin__.max(dpx)
+            max = builtins.max(dpx)
     if step is None:
         step = (max-min)/1000.
     if hold is not None:
@@ -1136,7 +1136,7 @@ def plotFitLine(abTuple, min=None,max=None,step=None,hold=True,s='-'):
     if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    import useful as U
+    from . import useful as U
     plotFitAny(U._poly,(abTuple[1],abTuple[0]), min,max,step,hold,s)
 def plotFitPoly(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
@@ -1145,7 +1145,7 @@ def plotFitPoly(parms, min=None,max=None,step=None,hold=True,s='-'):
     if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    import useful as U
+    from . import useful as U
     plotFitAny(U._poly, parms, min,max,step,hold,s)
 def plotFitDecay(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
@@ -1154,7 +1154,7 @@ def plotFitDecay(parms, min=None,max=None,step=None,hold=True,s='-'):
     if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    import useful as U
+    from . import useful as U
     plotFitAny(U._decay, parms, min,max,step,hold,s)
 def plotFitGaussian1D(parms, min=None,max=None,step=None,hold=True,s='-'):
     """
@@ -1163,7 +1163,7 @@ def plotFitGaussian1D(parms, min=None,max=None,step=None,hold=True,s='-'):
     if step is None defautls to 1000 points between min and max
     if hold is not None call Y.plothold(hold) beforehand
     """
-    import useful as U
+    from . import useful as U
     if   len(parmTuple0) == 2:
         f = U._gaussian1D_2
     elif len(parmTuple0) == 3:
@@ -1289,7 +1289,7 @@ if _wx:
 ''' 20080721 unused !?
 def hist(viewer, resolution=0):
     """old"""
-    import useful as U
+    from . import useful as U
     try:
         img  = viewer.m_imgArr
     except:
@@ -2132,7 +2132,7 @@ def vLeftClickZProfile(id=-1, avgBoxSize=1, s='-', slice=Ellipsis):
             w2,h2 = w/2., h/2.
             v.poly[:] = x0,y0,x1,y1 = int(x-w2+.5),int(y-h2+.5),  int(x+w2+.5),int(y+h2+.5)
             from .useful import mean2d
-            prof = N.empty(shape=nz, dtype=N.float)
+            prof = N.empty(shape=nz, dtype=float)
             for z in range(nz):
                 prof[z] = data[z,  y0:y1, x0:x1].mean()
             #prof = mean2d(a[:,  y0:y1, x0:x1])   ##->  TypeError: Can't reshape non-contiguous numarray
@@ -4119,8 +4119,8 @@ def vAnimate(vids=-1):
 
     gp = guiParams()
     #gp.animationRunning = False
-    import new
-    gp.animateStartStop = new.instancemethod(animateStartStop, gp, guiParams)
+    import types
+    gp.animateStartStop = types.MethodType(animateStartStop, gp)
     #gp.animateStart = new.instancemethod(animateStart, gp, guiParams)
 
     gp.direction = 1

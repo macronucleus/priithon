@@ -58,7 +58,7 @@ def load(fn):
         t,cols,ny,nx,isSwapped = _getImgMode(fp)
         fp.seek(0)
 
-        a = N.fromstring(fp.tobytes(), dtype=t)
+        a = N.frombuffer(fp.tobytes(), dtype=t).copy() # N.fromstring was removed for binary data
         if cols > 1:
             a.shape = (ny, nx, cols)
             a = a.transpose((2,0,1))
@@ -175,10 +175,10 @@ def save(arr, outfn, rescaleTo8bit=True, rgbOrder='rgba'):
                 mode = "I;16"
             else:
                 raise ValueError("unsupported array datatype")
-            img = Image.frombytes(mode, (nx,ny), arr.tostring())
+            img = Image.frombytes(mode, (nx,ny), arr.tobytes())
             print('new file')
         else:
-            img = Image.frombytes("RGBA"[:nc], (nx,ny), arr.tostring())"""
+            img = Image.frombytes("RGBA"[:nc], (nx,ny), arr.tobytes())"""
         img.save(outfn)
     elif backend == 'wx' and not outfn.endswith(('tif', 'tiff')):
         arr = arr[::-1]

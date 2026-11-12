@@ -355,9 +355,9 @@ def save(a, fn, ifExists='ask', zAxisOrder=None,
         initHdrArrayFrom(m.hdr, hdr)
 
     def mm(arr):
-        return N.max(arr), N.min(arr)
+        return N.min(arr), N.max(arr)
     def mmm(arr):
-        return N.max(arr), N.min(arr), N.mean(arr)
+        return N.min(arr), N.max(arr), N.mean(arr)
         
     if calcMMM:
         #from Priithon import useful as U
@@ -479,10 +479,8 @@ class Mrc2:
             else:
                 zAxisOrder = 'tzw'
         else:
-            import string
             # remove delimiter characters '-., '
-            zAxisOrder = zAxisOrder.translate(
-                string.join([chr(i) for i in range(256)],''), '-., ').lower()
+            zAxisOrder = zAxisOrder.translate(str.maketrans('', '', '-., ')).lower()
 
         mrcmode = dtype2MrcMode(arr.dtype.type)
         init_simple(self.hdr, mrcmode, arr.shape)

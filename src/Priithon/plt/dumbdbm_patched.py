@@ -53,7 +53,7 @@ class _Database:
             pass
         else:
             while 1:
-                line = string.rstrip(f.readline())
+                line = f.readline().rstrip()
                 if not line: break
                 key, (pos, siz) = eval(line)
                 self._index[key] = (pos, siz)

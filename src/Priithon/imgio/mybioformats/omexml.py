@@ -235,7 +235,7 @@ def qn(namespace, tag_name):
 
 def split_qn(qn):
     '''Split a qualified tag name or return None if namespace not present'''
-    m = re.match('\{(.*)\}(.*)', qn)
+    m = re.match(r'\{(.*)\}(.*)', qn)
     #return m.group(1), m.group(2) if m else None
     if m:
         return m.group(1), m.group(2)# if m else None

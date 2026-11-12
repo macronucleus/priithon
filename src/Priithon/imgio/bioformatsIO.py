@@ -670,17 +670,17 @@ class Reader(AbstractReader, generalIO.Reader):
         # obtain meta data other than Image
         # TODO: This must be done in a more structured way in the future
         if hasattr(self.omexml, 'root_node'):
-            for node in self.omexml.root_node.getchildren():
+            for node in list(self.omexml.root_node):
                 name = repr(node).split()[1].split('}')[1].replace("'", '')
                 if name not in  ('Image', 'StructuredAnnotations') or (self.nseries>1 and name == 'StructuredAnnotations'):
                     self.metadata[name] = dict(list(node.items()))
-                    for cnode in node.getchildren():
+                    for cnode in list(node):
                         cname = repr(cnode).split()[1].split('}')[1].replace("'", '')
                         self.metadata[name][cname] = dict(list(cnode.items()))
                 elif self.nseries > 1 and name == 'Image':
                     self.metadata.setdefault(name, [])
                     self.metadata[name].append(dict(list(node.items())))
-                    for cnode in node.getchildren():
+                    for cnode in list(node):
                         cname = repr(cnode).split()[1].split('}')[1].replace("'", '')
                         self.metadata[name][-1][cname] = dict(list(cnode.items()))
                     

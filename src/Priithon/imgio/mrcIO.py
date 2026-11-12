@@ -253,7 +253,7 @@ class Writer(generalIO.Writer):
         dtype = Mrc.MrcMode2dtype(hdr.PixelType[0])
 
         # objective
-        self.mag, self.na, self.n1 = LENS_ID.get(int(hdr.LensNum), (generalIO.MAG, generalIO.NA, generalIO.N1))
+        self.mag, self.na, self.n1 = LENS_ID.get(int(N.ravel(hdr.LensNum)[0]), (generalIO.MAG, generalIO.NA, generalIO.N1))
         
         self.setDim(hdr.Num[0], hdr.Num[1], nz, hdr.NumTimes[0], hdr.NumWaves[0], dtype, hdr.wave, hdr.ImgSequence[0])
 

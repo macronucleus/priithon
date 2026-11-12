@@ -399,7 +399,7 @@ class spv(spvCommon):
             from Priithon import usefulX
             usefulX._plotprofile_avgSize = self.plot_avgBandSize
         def OnSelectSubRegion(ev):
-            from viewerRubberbandMode import viewerRubberbandMode
+            from .viewerRubberbandMode import viewerRubberbandMode
             rub = viewerRubberbandMode(id=self.id,
                                        rubberWhat="box",
                                        color=(0, 255, 0),

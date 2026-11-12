@@ -431,17 +431,17 @@ def strTranslate(s, frm='', to='', delete='', keep=None):
     'ef'
     This is an arbitrary design choice - makes as much sense as anything, I suppose.
     """
-    allchars = string.maketrans('','')
     if len(to) == 1:
         to = to * len(frm)
-    trans = string.maketrans(frm, to)
+    trans = str.maketrans(frm, to)
+    s = str(s)
+    # deletion is done before translation (same as Python2 str.translate(table, deletechars))
     if keep is not None:
-        delete = allchars.translate(allchars, keep.translate(allchars, delete))
-    #def callable(s):
-
-    if type(s) is str: # HACK workaround for unicode (occurred with TextCrtl unicode-version of wxPython)
-        s = str(s)
-    return s.translate(trans, delete)
+        keep = set(keep) - set(delete)
+        s = ''.join([c for c in s if c in keep])
+    elif delete:
+        s = ''.join([c for c in s if c not in delete])
+    return s.translate(trans)
     #return callable
 
 def memNAprofile(dicts=[],
@@ -672,7 +672,7 @@ def arrSharedMemory(shape, dtype, tag="PriithonSharedMemory"):
     share memory between different processes if same `tag` is used.
     """
     itemsize = N.dtype(dtype).itemsize
-    count = N.product(shape)
+    count = N.prod(shape)
     size =  count * itemsize
     
     import mmap
@@ -2160,7 +2160,7 @@ def image2array(im, i0=0, iDelta=1, squeezeGreyRGB=True):
 
     if i0 is None or nn == 1:
         #global a
-        a = N.fromstring(im.tobytes(), t)#tostring(), t)
+        a = N.frombuffer(im.tobytes(), t).copy() # N.fromstring was removed for binary data
         if cols == -1:
             raise NotImplementedError("TODO: bit array: image size: %s  but array shape: %s" % (im.size, a.shape))
             # s = im.size[0]
@@ -2193,14 +2193,14 @@ def image2array(im, i0=0, iDelta=1, squeezeGreyRGB=True):
             a = N.empty(shape=(nn, cols, ny, nx), dtype=t)
             for i in range(nn):
                 im.seek(i0+iDelta*i)
-                x = N.fromstring(im.tobytes(), t)#tostring(), t)
+                x = N.frombuffer(im.tobytes(), t)
                 x.shape = (ny, nx, cols)
                 a[i] = x.transpose((2,0,1))
         else:
             a = N.empty(shape=(nn, ny, nx), dtype=t)
             for i in range(nn):
                 im.seek(i0+iDelta*i)
-                x = N.fromstring(im.tobytes(), t)#tostring(), t)
+                x = N.frombuffer(im.tobytes(), t)
                 x.shape = (ny, nx)
                 a[i] = x
         
@@ -2238,7 +2238,7 @@ def array2image(a, rgbOrder="rgba"):
             from . import fftfuncs as F
             a22 = N.append(a22,F.zeroArr(a22.dtype,a22.shape[:2]+(2,)), -1)
             a22 = a22[:,:,rgbOrder[:3]]
-            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tostring())
+            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tobytes())
             return ii
         elif   a.shape[0] == 2:
             assert a.dtype==N.uint8
@@ -2246,19 +2246,19 @@ def array2image(a, rgbOrder="rgba"):
             from . import fftfuncs as F
             a22 = N.append(a22,F.zeroArr(a22.dtype,a22.shape[:2]+(1,)), -1)
             a22 = a22[:,:,rgbOrder[:3]]
-            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tostring())
+            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tobytes())
             return ii
         elif a.shape[0] == 3:
             assert a.dtype==N.uint8
             a22 = N.transpose(a,(1,2,0)) # .copy()
             a22 = a22[:,:,rgbOrder[:3]]
-            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tostring())
+            ii = Image.frombytes("RGB", (a.shape[-1],a.shape[-2]), a22.tobytes())
             return ii
         elif a.shape[0] == 4:
             assert a.dtype==N.uint8
             a22 = N.transpose(a,(1,2,0)) # .copy()
             a22 = a22[:,:,rgbOrder[:4]]
-            ii = Image.frombytes("RGBA", (a.shape[-1],a.shape[-2]), a22.tostring())
+            ii = Image.frombytes("RGBA", (a.shape[-1],a.shape[-2]), a22.tobytes())
             return ii
         else:
             raise ValueError("only 2d greyscale or 3d (RGB[A]) supported")
@@ -2274,7 +2274,7 @@ def array2image(a, rgbOrder="rgba"):
         mode = "I;16"
     else:
         raise ValueError("unsupported array datatype")
-    return Image.frombytes(mode, (a.shape[1], a.shape[0]), a.tostring())
+    return Image.frombytes(mode, (a.shape[1], a.shape[0]), a.tobytes())
     #20040929 todo: try this:   return Image.frombuffer(mode, (a.shape[1], a.shape[0]), a._data)'''
 
 
@@ -3095,7 +3095,7 @@ def calc_threshold_otsu2(a, histYX=None, retEM=False, retImg=False):
     #T=N.arange(0,K+1, dtype=N.float64)
     #T[0]  = x[0] -1 # lower bound is fixed to min-1
     #T[K]  = x[-1]+1 # upper bound is fixed to max+1
-    Tk=N.arange(0,K+1, dtype=N.int) # theshold in units of "bin number"
+    Tk=N.arange(0,K+1, dtype=int) # theshold in units of "bin number"
     Tk[0]  = -1 # lower bound is fixed to min-1
     Tk[K]  = nk # upper bound is fixed to max+1
     
@@ -3346,7 +3346,7 @@ def saveTxt(arrND, fname, fmt='%8.3f', delimiter=' ', intro='',  transpose=False
             import gzip
             fh = gzip.open(fname,'wb')
         else:
-            fh = file(fname,'w')
+            fh = open(fname,'w')
     elif hasattr(fname, 'readline'):
         fh = fname
     else:
@@ -3572,22 +3572,41 @@ def uu_encodestring(text, compress=True):
     from http://effbot.org/librarybook/uu.htm
     seb added bz2 compression
     """
-    import io, uu, bz2
-    fin = io.StringIO(bz2.compress(text))
-    fout = io.StringIO()
-    uu.encode(fin, fout)
-    return fout.getvalue()
+    # the uu module was removed in Python 3.13 -> use binascii
+    import binascii, bz2
+    if isinstance(text, str):
+        text = text.encode()
+    if compress:
+        text = bz2.compress(text)
+    lines = ['begin 666 -\n']
+    for i in range(0, len(text), 45):
+        lines.append(binascii.b2a_uu(text[i:i+45]).decode('ascii'))
+    lines.append(' \nend\n')
+    return ''.join(lines)
 
 def uu_decodestring(text, decompress=True):
     """
     from http://effbot.org/librarybook/uu.htm
     seb added bz2 compression
     """
-    import io, uu, bz2
-    fin = io.StringIO(text)
-    fout = io.StringIO()
-    uu.decode(fin, fout)
-    return bz2.decompress(fout.getvalue())
+    # the uu module was removed in Python 3.13 -> use binascii
+    import binascii, bz2
+    if isinstance(text, bytes):
+        text = text.decode('ascii')
+    data = []
+    started = False
+    for line in text.splitlines():
+        if not started:
+            started = line.startswith('begin ')
+            continue
+        if line.strip() == 'end':
+            break
+        if line.strip():
+            data.append(binascii.a2b_uu(line))
+    data = b''.join(data)
+    if decompress:
+        data = bz2.decompress(data)
+    return data
 
 
 def grep(pattern, *files):# , retList=False):
@@ -3713,7 +3732,7 @@ def primeFactors(a, max=None, includeRemainder=False):
        largest prime in list will be max
         (as often as it would be in the complete list)
        in this case: if includeRemainder is True:
-                     append remainder so that N.product(<list>) == a
+                     append remainder so that N.prod(<list>) == a
     """
     f = []
     for p in primes(a):

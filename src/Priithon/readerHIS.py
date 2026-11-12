@@ -7,7 +7,7 @@ import numpy as N
 mmap_shape = None # default: map entire file; change this to handle BIG files
 
 dtypeHIS = N.dtype([
-    ('magic', 'a2'),
+    ('magic', 'S2'),
     ('ComLen', N.uint16),
     ('iDX', N.uint16),
     ('iDY', N.uint16),

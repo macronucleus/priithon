@@ -877,7 +877,7 @@ class spv(spvCommon):
         from . import usefulX as Y
         ####use tostring instead    self.m = Y.vtkMountain(self.img, "vtk of %d: %s" %  (self.id, self.title))
         #20060722 a = N.NumArray(shape=self.img.shape, type=self.img.type(), buffer=self.viewer.m_imgArrString)
-        a = N.fromstring(self.viewer.m_imgArrString, self.img.dtype)
+        a = N.frombuffer(self.viewer.m_imgArrString, self.img.dtype).copy()
         a.shape = self.img.shape
         self.m = Y.vtkMountain(a, "vtk of %d: %s" %  (self.id, self.title))
 

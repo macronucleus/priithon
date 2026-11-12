@@ -275,13 +275,13 @@ def _zoom2DMap(vals_yx, points_yx, shape):
     vals = N.array(vals_yx).T # shape (n,)
     points = points_yx # shape (n, D)
     pmin = points[0]
-    psize = N.subtract(points[-1], pmin).astype(N.int)
+    psize = N.subtract(points[-1], pmin).astype(int)
     gyx = N.array(N.indices(psize)).T + pmin
     zoomed = [interpolate.griddata(points, v, gyx, method='cubic').T for v in vals]
     # HACK: transposition after griddata produced the best result
 
     # treat outside regions
-    pad_width = [(m, shape[d]-(m+psize[d])) for d, m in enumerate(pmin.astype(N.int))]
+    pad_width = [(m, shape[d]-(m+psize[d])) for d, m in enumerate(pmin.astype(int))]
     zoomed = [N.pad(z, pad_width, 'edge') for z in zoomed]
     
     return N.array(zoomed)
@@ -543,7 +543,7 @@ class RegionalIterator(object):
 
     def iterativeRegionalProcess(self, base_yxs, *args, **kwds):
 
-        npxls = min(N.divide(self.arr.shape[1:], 4).astype(N.int))
+        npxls = min(N.divide(self.arr.shape[1:], 4).astype(int))
         zyxs = 0
 
         if npxls < self.min_npxls:

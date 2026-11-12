@@ -501,7 +501,7 @@ def rotateIndicesND(slicelist, dtype=N.float64, rot=0, mode=2, store_shape=False
             irs = N.reshape(irs, ind_shape)
 
         irs = irs[tuple(slc)]
-        if mode == 1 and N.sometrue(dm):
+        if mode == 1 and N.any(dm):
             inds = N.empty_like(irs)
            # print 'translate', dm
             for d, ind in enumerate(irs):
@@ -529,7 +529,7 @@ def rotateIndices2D(shape, rot, orig=None, dtype=N.float64):
     """
     # FIX ME Rot is something wrong!! 081027
 
-    shape = N.asarray(shape, N.int)
+    shape = N.asarray(shape, int)
     
     if orig is None:
         y, x = shape / 2.
@@ -585,7 +585,7 @@ def rotateIndices2DNew(shape, rot, orig=None, dtype=N.float64):
     """
     # FIX ME Rot is something wrong!! 081027
 
-    shape = N.asarray(shape, N.int)
+    shape = N.asarray(shape, int)
     
     if orig is None:
         y, x = shape / 2.

@@ -893,13 +893,13 @@ class plot_frame(wx.Frame):
             #from priithon.all import U
             #U.writeArray(vstack([
             #ll = self.client.line_list
-            f = file(fn, "w")
+            f = open(fn, "w")
             for dataset in self.client.line_list:
                 ps = dataset.points
                 ps = asanyarray( ps )
                 for x_y in ps.T:
                     for el in x_y:
-                        f.write(repr(el) + csv_sep)
+                        f.write(repr(el.item() if hasattr(el, 'item') else el) + csv_sep)
                     f.write('\n')
             f.close()
         dlg.Destroy()
@@ -976,8 +976,8 @@ class plot_frame(wx.Frame):
 
 def lena_obj():
     import pickle
-    import wxplt, os
-    d,junk = os.path.split(os.path.abspath(wxplt.__file__))
+    import os
+    d,junk = os.path.split(os.path.abspath(__file__))
     fname = os.path.join(d,'lena.dat')
     f = open(fname,'rb')
     import pickle
@@ -990,8 +990,8 @@ def lena_obj():
 
 def lena():
     import pickle
-    import wxplt, os
-    d,junk = os.path.split(os.path.abspath(wxplt.__file__))
+    import os
+    d,junk = os.path.split(os.path.abspath(__file__))
     fname = os.path.join(d,'lena.dat')
     f = open(fname,'rb')
     import pickle

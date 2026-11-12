@@ -188,7 +188,7 @@ class Reader(generalIO.Reader):
 
             self.fp.seek(0)
 
-            a = N.fromstring(self.fp.tobytes(), self.dtype)
+            a = N.frombuffer(self.fp.tobytes(), self.dtype).copy() # N.fromstring was removed for binary data
             a.shape = (self.ny, self.nx)
 
             if self.isSwapped:

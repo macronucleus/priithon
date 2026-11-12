@@ -353,7 +353,7 @@ def OnB(ev, self=self, b=b, iii=len(self.doOnEvt)):
        try:
           f(self.execModule, %s, b, ev)
        except:
-          import PriConfig
+          from Priithon import PriConfig
           if PriConfig.raiseEventHandlerExceptions:
              raise
           else:

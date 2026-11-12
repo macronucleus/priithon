@@ -34,6 +34,13 @@ import string, numpy
 
 
 
+# numpy>=2.0: repr() of a numpy scalar is like "np.float64(1.0)" instead of "1.0"
+_evalNamespace = {'np': numpy, 'numpy': numpy, 'N': numpy}
+def _repr(element):
+    if isinstance(element, numpy.generic):
+        element = element.item()
+    return repr(element)
+
 def readArray(filename, comment='#', sep=None):
     """Return an array containing the data from file |filename|. This
     function works for arbitrary data types (every array element can be
@@ -46,7 +53,7 @@ def readArray(filename, comment='#', sep=None):
     data = []
     for line in TextFile(filename):
         if not line[0] in comment:
-            data.append(list(map(eval, line.split(sep))))#string.split(line, sep))))
+            data.append([eval(v, _evalNamespace) for v in line.split(sep)])#string.split(line, sep))))
     a = numpy.array(data)
     if a.shape[0] == 1 or a.shape[1] == 1:
         a = numpy.ravel(a)
@@ -67,7 +74,7 @@ def readArray_conv(filename, fn, comment='#', dtype=None, sep=None):
     data = []
     for line in TextFile(filename):
         if not line[0] in comment:
-            data.append(list(map(fn, string.split(line, sep))))
+            data.append(list(map(fn, line.split(sep))))
     a = numpy.array(data)
     if a.shape[0] == 1 or a.shape[1] == 1:
         a = numpy.ravel(a)
@@ -78,7 +85,7 @@ def readFloatArray(filename, dtype=numpy.float64, sep=None): ## seb added type a
     data = []
     for line in TextFile(filename):
         if line[0] != '#':
-            data.append(list(map(string.atof, string.split(line, sep))))
+            data.append(list(map(float, line.split(sep))))
     a = numpy.array(data, dtype=dtype) ## seb added type argument
     if a.shape[0] == 1 or a.shape[1] == 1:
         a = numpy.ravel(a)
@@ -89,7 +96,7 @@ def readIntegerArray(filename, dtype=numpy.int32, sep=None): ## seb added type a
     data = []
     for line in TextFile(filename):
         if line[0] != '#':
-            data.append(list(map(string.atoi, string.split(line, sep))))
+            data.append(list(map(int, line.split(sep))))
     a = numpy.array(data, dtype=dtype) ## seb added type argument
     if a.shape[0] == 1 or a.shape[1] == 1:
         a = numpy.ravel(a)
@@ -104,7 +111,7 @@ def writeArray(array, filename, mode='w', sep=' '):
     for line in array:
         #for element in line:
         #    file.write(`element` + sep)
-        file.write(sep.join([repr(element) for element in line]))
+        file.write(sep.join([_repr(element) for element in line]))
         file.write('\n')
     file.close()
 
@@ -128,7 +135,7 @@ def writeDataSets(datasets, filename, separator = ''):
             d = d[:, numpy.newaxis]
         for point in d:
             for number in point:
-                file.write(repr(number) + ' ')
+                file.write(_repr(number) + ' ')
             file.write('\n')
         if (i < nsets-1):
             file.write(separator + '\n')

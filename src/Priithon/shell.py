@@ -221,7 +221,7 @@ class PriShell(Shell):
                             #traceback.print_exc(file=__main__.shell.stderr)
                         else:
                             import inspect
-                            (args, varargs, varkw, defaults)=inspect.getargspec(object)
+                            (args, varargs, varkw, defaults)=inspect.getfullargspec(object)[:4]
                             if  varargs is not None:
                                 args.append( varargs )
                             if  varkw is not None:

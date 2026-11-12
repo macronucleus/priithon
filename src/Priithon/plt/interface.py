@@ -401,7 +401,7 @@ marker_re = re.compile('[ox+s^v]|(?:[^-])[.]')
 marker_trans = {'.':'dot','o':'circle','x':'cross','+':'plus','s':'square',
                 '^':'triangle','v':'down_triangle'}
 
-line_re = re.compile('--|-\.|[-:]')
+line_re = re.compile(r'--|-\.|[-:]')
 line_trans = {'-':'solid',':':'dot','-.':'dot dash','--':'dash'}
 def process_format(format):
     if format == '':

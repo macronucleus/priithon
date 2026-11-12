@@ -320,7 +320,7 @@ class GLViewer(GLViewerCommon):
                          GL_LUMINANCE,GL_UNSIGNED_SHORT, None)
 
         elif self.m_imgArr.dtype.type in (N.float64,
-                                          N.int32, N.uint32, N.int64, N.uint64, N.int0,
+                                          N.int32, N.uint32, N.int64, N.uint64, N.intp,
                                           N.complex64, N.complex128):
             glTexImage2D(GL_TEXTURE_2D,0,  GL_RGB, self.tex_nx,self.tex_ny, 0, 
                          GL_LUMINANCE,GL_FLOAT, None)
@@ -651,7 +651,7 @@ class GLViewer(GLViewerCommon):
             elif not self.transferf:
                 # handle non gfx-card dtypes
                 if data.dtype.type in (N.float64,
-                                       N.int32, N.uint32,N.int64, N.uint64, int):#N.int0):
+                                       N.int32, N.uint32,N.int64, N.uint64, int):#N.intp):
                     data = data.astype(N.float32)
                 
                 srange =  float(self.m_maxHistScale - self.m_minHistScale)

@@ -9,8 +9,7 @@ import os, string, sys
 # Use the gzip module for Python version 1.5.2 or higher
 gzip = None
 try:
-    _version = list(map(string.atoi,
-                   string.split(string.split(sys.version)[0], '.')))
+    _version = list(sys.version_info[:3])
     if _version >= [1, 5, 2]:
         try:
             import gzip
@@ -63,7 +62,7 @@ class TextFile:
                     self.file = os.popen("bzip2 -dc " + filename, mode)
                 else:
                     try:
-                        self.file = open(filename, "rU") #  universal newline !  seb !!  mode)
+                        self.file = open(filename, "r") #  universal newline is the default in py3 ("rU" was removed in Python 3.11)
                     except IOError as details:
                         if type(details) == type(()):
                             details = details + (filename,)

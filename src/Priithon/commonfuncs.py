@@ -135,7 +135,10 @@ def deleteConfig(name, **kwds):
 # a helper function for debugging the packaged software
 def main_is_frozen():
     try:
-        import imp
+        try:
+            import imp
+        except ImportError: # imp was removed in Python 3.12
+            import _imp as imp
         return (getattr(sys, "frozen", False) or # new py2exe + pyinstaller
            hasattr(sys, "importers") # old py2exe
            or imp.is_frozen("__main__")) # tools/freeze

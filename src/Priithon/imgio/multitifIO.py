@@ -185,7 +185,7 @@ class Reader(generalIO.Reader):
                 meta = xml2dict(self.fp.ome_metadata)
             else:
                 meta = self.fp.ome_metadata
-            if 'OME' in self.metadata:
+            if 'OME' in meta: # was: `in self.metadata` (always False -> pixel size and wavelengths were never read)
                 meta = meta['OME']
             self.metadata.update(meta)
 
@@ -415,7 +415,13 @@ class Writer(generalIO.Writer):
                     colormapped = self.fp._colormap is not None
                     isrgb = self.fp._storedshape[-1] in (3, 4)
                     #des = tifffile.tifffile.imagej_description(shape=shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
-                    des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, colormaped=colormapped, **self.metadata)
+                    # tifffile >= 2026.2.28 renamed the keyword colormaped -> colormapped
+                    import inspect
+                    if 'colormapped' in inspect.signature(tifffile.tifffile.imagej_description).parameters:
+                        cmapkwd = {'colormapped': colormapped}
+                    else:
+                        cmapkwd = {'colormaped': colormapped}
+                    des = tifffile.tifffile.imagej_description(shape, rgb=isrgb, **cmapkwd, **self.metadata)
                     #print('writing metaata', self.metadata)
                 elif self.style == 'ome':
                     #self.metadata['DimensionOrder'] = 'XY'
@@ -430,21 +436,32 @@ class Writer(generalIO.Writer):
                        # print(self.metadata, datashape, axes)
 
                         if hasattr(self.fp._ome, 'addimage'): # older versions
-                            self.fp._ome.addimage(
-                                self.dtype,
-                                datashape,
-                                storedshape,
-                              #  axes=axes,
-                                **self.metadata
-                                )
+                            addimage = self.fp._ome.addimage
                         else:
-                            self.fp._omexml.addimage(
+                            addimage = self.fp._omexml.addimage
+                        try:
+                            addimage(
                                 self.dtype,
                                 datashape,
                                 storedshape,
                               #  axes=axes,
                                 **self.metadata
                                 )
+                        except Exception as e:
+                            # newer tifffile raises OmeXmlError('metadata DimensionOrder does not match ...')
+                            # if any of the dimensions has length 1.
+                            # The dimension order is still determined from 'axes' in the metadata.
+                            if 'DimensionOrder' in str(e) and 'DimensionOrder' in self.metadata:
+                                metadata = dict(self.metadata)
+                                del metadata['DimensionOrder']
+                                addimage(
+                                    self.dtype,
+                                    datashape,
+                                    storedshape,
+                                    **metadata
+                                    )
+                            else:
+                                raise
 
                         # when this error is raised:
                         # OmeXmlError('metadata DimensionOrder does not match {axes!r}')
@@ -748,7 +765,7 @@ def xml2dict(xml, sanitize=True, prefix=None):
 
     """
    # from collections import defaultdict  # delayed import
-    from xml.etree import cElementTree as etree  # delayed import
+    from xml.etree import ElementTree as etree  # delayed import
 
     old="""
     at = tx = ''
@@ -818,7 +835,7 @@ if READABLE_FORMATS:
     tifff.xml2dict = xml2dict
 
 def metadata_from_ome(fn, sanitize=True, prefix=None):
-    from xml.etree import cElementTree as etree  # delayed import
+    from xml.etree import ElementTree as etree  # delayed import
 
     tree = etree.parse(fn)
     root = tree.getroot()

@@ -55,7 +55,7 @@ def highPassF(af, highpassSigma=2.5, wiener=0.2, cutoffFreq=3):
         shape[-1] = (shape[-1] - 1) * 2
         szyx = shape / 2.
 
-        if _G is not None and N.alltrue(_G_SHAPE == shape):
+        if _G is not None and N.all(_G_SHAPE == shape):
             g = _G
         else:
             g = imgFilters.gaussianArrND(shape, highpassSigma, peakVal=1, orig=szyx)
@@ -131,7 +131,7 @@ def bandStopFilter(arr, x=4):
     """
     #shape = N.asarray(arr.shape)
     #shape = N.where(shape % 2, shape+1, shape)
-    #if N.sometrue(shape > arr.shape):
+    #if N.any(shape > arr.shape):
     #    arr = imgFilters.paddingMed(arr, shape)
 
     fa = F.rfft2d(arr)
@@ -154,7 +154,7 @@ def mexhatFilter(a, mexSize=1):#, trimRatio=0.9):
             raise ValueError('go to except')
     except NameError as ValueError:
         mexhatC_size = mexSize
-        shape = N.asarray(a.shape, N.int)#N.float32)
+        shape = N.asarray(a.shape, int)#N.float32)
         mexhatC = F.shift(F.mexhatArr(shape, scaleHalfMax=mexhatC_size, orig=None)) # orig 0.5 pixel does not work...
         mexhatCf = fftw.rfft(mexhatC) / N.multiply.reduce( shape )
 

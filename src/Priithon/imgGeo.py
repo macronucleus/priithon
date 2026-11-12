@@ -138,12 +138,12 @@ def closeEnough(pos, pos0, r):
     try:
         if len(r) == diff.shape[-1]:
             if len(r) == len(diff[0]):
-                return N.array([N.alltrue(d < r) for d in diff])
+                return N.array([N.all(d < r) for d in diff])
             else:
                 r = N.average(r)
                 raise TypeError('go to except')
         else:
-            return N.alltrue(diff < r)
+            return N.all(diff < r)
     except TypeError:
         dd = N.power(diff, 2)
         dd = N.sum(dd, axis=-1)

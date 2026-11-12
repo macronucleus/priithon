@@ -169,7 +169,7 @@ forceSecondPeak=None, acceptOrigin=True, maskSigmaFact=1., removeY=None, removeX
 
     yx -= center
 
-    if N.alltrue(N.abs(yx) < 1.0) and not acceptOrigin:
+    if N.all(N.abs(yx) < 1.0) and not acceptOrigin:
         forceSecondPeak = True
 
     # forceSecondPeak:
@@ -227,7 +227,7 @@ def highPassF(af, highpassSigma=2.5, wiener=0.2, cutoffFreq=3):
         sy2 = ny / 2.
         sx2 = nx - 1
         shape = (sy2*2,sx2+1)
-        if _G is not None and N.alltrue(_G_SHAPE == shape):
+        if _G is not None and N.all(_G_SHAPE == shape):
             g = _G
         else:
             g = gaussianArr2D(shape, highpassSigma, peakVal=1, orig=(sy2,0))
@@ -448,7 +448,7 @@ def pointsCutOut3D(arr, posList, windowSize=100, d2=None, interpolate=True, remo
         dif = pos +0.5 - halfWin[-ndim_pos:]
 
         dif = N.round(dif)
-        dif = dif.astype(N.int)
+        dif = dif.astype(int)
         starts = dif - margin
         starts = N.where(starts < 0, 0, starts)
         stops = dif + windowSize[-ndim_pos:] + margin
@@ -509,7 +509,7 @@ def paddingValue(img, shape, value=0, shift=None, smooth=0, interpolate=True):
         shift = 0#[0] * len(shapeS)
     shapeL = shape#N.add(shapeS, center+shift)
     #start, stop = (shapeL - shapeS)/2., (shapeL + shapeS)/2.
-    start = N.round((shapeL - shapeS)/2.).astype(N.int)
+    start = N.round((shapeL - shapeS)/2.).astype(int)
     stop = shapeS + start
     slc = [slice(start[d], stop[d], None) for d in range(img.ndim)]
 
@@ -719,9 +719,9 @@ def zoomFourier(arr, factor, use_abs=False, padd=None):
     
     factor = target / shape
     if use_abs:
-        return N.abs(afp) * N.product(factor)
+        return N.abs(afp) * N.prod(factor)
     else:
-        return N.real(afp) * N.product(factor)
+        return N.real(afp) * N.prod(factor)
 
 def _makeFourierSlices(oshape, tshape, dim):
     tslices = []
@@ -1368,7 +1368,7 @@ def radialaverage(data, center=None, useMaxShape=False):
     r = N.sqrt(r)
     #y, x = N.indices((data.shape))
     #r = N.sqrt((x - center[0])**2 + (y - center[1])**2) # distance from the center
-    r = r.astype(N.int)
+    r = r.astype(int)
 
     if data.dtype.type in (N.complex64, N.complex128):
         rbin = N.bincount(r.ravel(), data.real.ravel())

@@ -350,7 +350,7 @@ class ImagePanel(wx.Panel):
         # here is the workaround for Chromagnon
         try:
             batch = self.GetParent().GetParent().GetParent()
-            if hasattr(batch, 'th') and batch.th.isAlive():
+            if hasattr(batch, 'th') and batch.th.is_alive():
                 for wi, w in enumerate(ws):
                     arr = self.doc.get3DArr(t=t, w=w)
                     for z in range(self.doc.nz):

@@ -158,7 +158,7 @@ class Mrc:
         #self.extHdrArray.dtype = type_descr
         self.extHdrArray = N.recarray(shape=nz, dtype=type_descr, buf=self.e)
         if self.isByteSwapped:
-            self.extHdrArray = self.extHdrArray.newbyteorder()
+            self.extHdrArray = self.extHdrArray.view(self.extHdrArray.dtype.newbyteorder())
         
         self.extInts   = self.extHdrArray.field('int')
         self.extFloats = self.extHdrArray.field('float')
@@ -186,7 +186,7 @@ class Mrc:
         self.data.shape = shape
             
         if self.isByteSwapped:
-            self.data = self.data.newbyteorder()
+            self.data = self.data.view(self.data.dtype.newbyteorder())
 
     def setTitle(self, s, i=-1):
         """set title i (i==-1 means "append") to s"""
@@ -472,10 +472,8 @@ class Mrc2:
             else:
                 zAxisOrder = 'tzw'
         else:
-            import string
             # remove delimiter characters '-., '
-            zAxisOrder = zAxisOrder.translate(
-                string.join([chr(i) for i in range(256)],''), '-., ').lower()
+            zAxisOrder = zAxisOrder.translate(str.maketrans('', '', '-., ')).lower()
 
         mrcmode = dtype2MrcMode(arr.dtype.type)
         init_simple(self.hdr, mrcmode, arr.shape)
@@ -560,7 +558,7 @@ class Mrc2:
                                              shape=nSecs  )
 
             if self._fileIsByteSwapped:
-                self._extHdrArray = self._extHdrArray.newbyteorder()
+                self._extHdrArray = self._extHdrArray.view(self._extHdrArray.dtype.newbyteorder())
 
             self.extInts   = self._extHdrArray.field('int')
             self.extFloats = self._extHdrArray.field('float')
@@ -572,7 +570,7 @@ class Mrc2:
         self._shape = (nsecs, ny,nx) # todo: wavelenths , times
         self._shape2d = self._shape[-2:]
         self._dtype  = MrcMode2dtype( self.hdr.PixelType[0] )
-        self._secByteSize = N.nbytes[self._dtype] * N.prod( self._shape2d )
+        self._secByteSize = N.dtype(self._dtype).itemsize * N.prod( self._shape2d )
         
     def setHdrForShapeType(self, shape, type ):
         mrcmode = dtype2MrcMode(type)
@@ -1155,7 +1153,7 @@ mrcHdrFields = [
     ('i2', (5,), 'wave', 'Wavelength 1, in nm.'),
     ('f4', (3,), 'zxy0', 'X origin, in um.'),   # 20050920  ## fixed: order is z,x,y NOT x,y,z
     ('i4', (1,), 'NumTitles', 'Number of titles. Valid numbers are between 0 and 10. '),
-    ('a80', (10,), 'title', 'Title 1. 80 characters long. '),
+    ('S80', (10,), 'title', 'Title 1. 80 characters long. '),
 ]
 
 mrcHdrFormats = []

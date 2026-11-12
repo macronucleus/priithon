@@ -120,7 +120,7 @@ class HugeTableGrid(wx.grid.Grid):
 
 class ArrayGrid(wx.Frame):
     def __init__(self, parent, arr, title):
-        wxFrame.__init__(self, parent, -1, title)
+        wx.Frame.__init__(self, parent, -1, title)
         global grid
         grid = HugeTableGrid(self, arr)
 

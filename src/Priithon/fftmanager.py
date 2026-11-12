@@ -280,6 +280,8 @@ class FFTManager(object):
             af = self._fftw(a, func, axes=axes, nthreads=nthreads, s=shape)
 
         else:
+            if axes is None and shape is not None: # numpy>=2.0: axes must be given together with s
+                axes = tuple(range(-len(shape), 0))
             af = N.fft.irfftn(a, s=shape, axes=axes)
 
         return af
