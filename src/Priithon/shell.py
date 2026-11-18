@@ -66,6 +66,26 @@ class PriShellFrame(ShellFrame):
             self.Destroy()
 
 
+def fixGTKKeyCode(event):
+    """
+    wxGTK (wxWidgets 3.3) derives the key code of EVT_KEY_DOWN from the
+    hardware keycode assuming a Linux (evdev) keyboard.  When the X server
+    is XQuartz (e.g. ssh -X from a Mac) the hardware keycodes are different,
+    so keys get wrong codes: '8' and '*' (Shift+8) arrive as WXK_RETURN.
+    The raw key code (GDK keyval) is still correct, so use it for
+    printable ASCII keys.
+    """
+    if wx.Platform != '__WXGTK__':
+        return event.GetKeyCode()
+    key = event.GetKeyCode()
+    raw = event.GetRawKeyCode()
+    if 0x20 < raw < 0x7f:
+        fixed = ord(chr(raw).upper())
+        if key != fixed:
+            event.SetKeyCode(fixed)
+            key = fixed
+    return key
+
 class PriShell(Shell):
     def __init__(self, *args, **kwds):
         Shell.__init__(self, *args, **kwds)
@@ -73,7 +93,7 @@ class PriShell(Shell):
     def OnKeyDown(self, event):
         """Key down event handler."""
 
-        key = event.GetKeyCode()
+        key = fixGTKKeyCode(event)
         # If the auto-complete window is up let it do its thing.
         if self.AutoCompActive():
             event.Skip()
