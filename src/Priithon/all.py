@@ -81,7 +81,14 @@ try:
     matplotlib.use('wxagg')
     from matplotlib import pyplot as P
     P.ion()
-except:    _broken +="  P"
+except:
+    # Without wx (e.g. on a server) the wxagg backend cannot load; that is
+    # expected there, so it is not reported.
+    try:
+        import wx
+        _broken +="  P"
+    except ImportError:
+        pass
 
 if _broken != "" and not main_is_frozen():
     print(" * couldn't load module(s): ", _broken)
