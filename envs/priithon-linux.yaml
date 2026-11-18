@@ -1,0 +1,8 @@
+# ~/envs/priithon-linux.yml   … Linux（Windows も）で追加するもの
+# Linux
+#conda env update -n base -f ~/envs/priithon.yml
+#conda env update -n base -f ~/envs/priithon-linux.yml
+channels:
+  - conda-forge
+dependencies:
+  - freeglut
