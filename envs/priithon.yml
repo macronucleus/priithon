@@ -1,0 +1,33 @@
+# ~/envs/priithon.yml
+# 今の base 環境に入れる
+#conda env update -n base -f ~/envs/priithon.yml
+# Linuxの追加
+#conda env update -n base -f ~/envs/priithon-linux.yml
+
+# 新しい環境を作る場合
+# conda env create -n dev  -f ~/envs/priithon.yml 
+# Linuxの追加
+# conda env update -n dev -f ~/envs/priithon-linux.yml
+
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - six
+  - charset-normalizer
+  - wxpython
+  - pyopengl
+  - wxmplot
+  - pillow
+  - pyfftw
+  - nd2
+  - czifile
+  - oiffile
+  - readlif
+  - pip
+  - pip:
+      - git+https://github.com/macronucleus/tifffile.git
+      - -e ${HOME}/codes/py/Priithon
+      - -e ${HOME}/codes/py/Optics
+      - -e ${HOME}/codes/py/Chromagnon
