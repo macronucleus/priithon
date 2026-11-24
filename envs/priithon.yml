@@ -28,6 +28,6 @@ dependencies:
   - pip
   - pip:
       - git+https://github.com/macronucleus/tifffile.git
-      - -e ${HOME}/codes/py/Priithon
+      - -e ${HOME}/codes/py/priithon
       - -e ${HOME}/codes/py/Optics
       - -e ${HOME}/codes/py/Chromagnon
